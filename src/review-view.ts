@@ -174,7 +174,7 @@ export class ReviewView extends ItemView {
         "p, li, blockquote, td, th, .callout-content, .callout-title-inner, span"
       ).forEach((el) => {
         if (el instanceof HTMLElement && !el.style.fontSize) {
-          el.style.fontSize = "1.15em";
+          el.style.fontSize = "2em";
         }
       });
 
