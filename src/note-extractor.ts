@@ -91,6 +91,9 @@ export function extractNotes(
       const resultSet = new Set<TFile>();
 
       validFilters.forEach((filter) => {
+        // 数量为 0 则跳过此条件
+        if (filter.count <= 0) return;
+
         // 筛选匹配此条件的笔记
         const matched = files.filter((file) => {
           const cache = app.metadataCache.getFileCache(file);
@@ -112,12 +115,9 @@ export function extractNotes(
           }
         });
 
-        // 确定此条件下的抽取数量
-        const count = filter.count > 0 ? filter.count : settings.pickCount;
-
-        // 随机选取
+        // 随机选取此条件指定数量的笔记
         const shuffled = fisherYatesShuffle([...matched]);
-        const picked = shuffled.slice(0, count);
+        const picked = shuffled.slice(0, filter.count);
 
         // 加入结果集（自动去重）
         picked.forEach((f) => resultSet.add(f));

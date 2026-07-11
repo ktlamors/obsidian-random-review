@@ -268,7 +268,7 @@ export class RandomReviewSettingTab extends PluginSettingTab {
 
     new Setting(containerEl)
       .setName("抽取数量")
-      .setDesc("每次随机抽取的笔记数量")
+      .setDesc("未设置属性筛选时的默认抽取数量；设置属性筛选后由各条件数量决定")
       .addText((text) =>
         text
           .setPlaceholder("10")
