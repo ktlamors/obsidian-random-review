@@ -21,9 +21,11 @@ function getSubFolders(app: App, parentPath: string, includeSelf: boolean): TFol
     if (!parentPath) {
       folders.push(file);
     } else {
-      // 只包含目标文件夹本身及其子文件夹
       const normalized = parentPath.replace(/\/+$/, "");
-      if (file.path === normalized || file.path.startsWith(normalized + "/")) {
+      // 只包含子文件夹（不含目标文件夹自身，除非 includeSelf）
+      if (file.path.startsWith(normalized + "/")) {
+        folders.push(file);
+      } else if (includeSelf && file.path === normalized) {
         folders.push(file);
       }
     }
@@ -53,12 +55,13 @@ function createFolderSelect(
   containerEl: HTMLElement,
   selectedPath: string,
   parentPath: string,
+  includeParent: boolean,
   onChange: (path: string) => void
 ): HTMLSelectElement {
   const select = containerEl.createEl("select");
   select.style.width = "100%";
 
-  const folders = getSubFolders(app, parentPath, parentPath !== "");
+  const folders = getSubFolders(app, parentPath, includeParent);
 
   // 空选项
   const emptyOpt = select.createEl("option");
@@ -172,6 +175,7 @@ export class RandomReviewSettingTab extends PluginSettingTab {
         createFolderSelect(
           this.app, selectWrapper, folderPath,
           this.plugin.settings.folderPath,
+          false,  // 排除列表不包含目标文件夹自身
           async (val) => {
             this.plugin.settings.excludeFolders[index] = val;
             await this.plugin.saveSettings();
