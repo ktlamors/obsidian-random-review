@@ -5,6 +5,7 @@ export class ReviewView extends ItemView {
   private queue: TFile[] = [];
   private currentIndex: number = 0;
   private answerVisible: boolean = false;
+  private boundHandleKeydown = this.handleKeydown.bind(this);
 
   private topBarEl!: HTMLElement;
   private noteContentEl!: HTMLElement;
@@ -76,11 +77,11 @@ export class ReviewView extends ItemView {
     this.toggleAnswerBtn.addEventListener("click", () => this.toggleAnswer());
 
     // 键盘事件
-    this.containerEl.addEventListener("keydown", this.handleKeydown.bind(this));
+    this.containerEl.addEventListener("keydown", this.boundHandleKeydown);
   }
 
   async onClose(): Promise<void> {
-    this.containerEl.removeEventListener("keydown", this.handleKeydown.bind(this));
+    this.containerEl.removeEventListener("keydown", this.boundHandleKeydown);
   }
 
   /**
