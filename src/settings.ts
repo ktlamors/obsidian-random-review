@@ -2,87 +2,67 @@ import {
   App,
   PluginSettingTab,
   Setting,
-  AbstractInputSuggest,
   TFolder,
   TAbstractFile,
 } from "obsidian";
 import type RandomReviewPlugin from "./main";
 
-// ──────────────────────────────────────────────
-// 文件夹自动补全建议组件
-// ──────────────────────────────────────────────
-class FolderSuggest extends AbstractInputSuggest<TFolder> {
-  private onChoose: (folder: TFolder) => void;
-  private input: HTMLInputElement;
+/**
+ * 获取 vault 中所有文件夹，按路径排序
+ */
+function getAllFolders(app: App): TFolder[] {
+  const folders: TFolder[] = [];
+  app.vault.getAllLoadedFiles().forEach((file: TAbstractFile) => {
+    if (file instanceof TFolder) {
+      folders.push(file);
+    }
+  });
+  return folders.sort((a, b) => a.path.localeCompare(b.path));
+}
 
-  constructor(
-    app: App,
-    inputEl: HTMLInputElement,
-    onChoose: (folder: TFolder) => void
-  ) {
-    super(app, inputEl);
-    this.onChoose = onChoose;
-    this.input = inputEl;
+/**
+ * 创建文件夹下拉选择框
+ * 用缩进展示层级结构
+ */
+function createFolderSelect(
+  app: App,
+  containerEl: HTMLElement,
+  selectedPath: string,
+  onChange: (path: string) => void
+): HTMLSelectElement {
+  const select = containerEl.createEl("select");
+  select.style.width = "100%";
 
-    // 聚焦时自动弹出全部文件夹
-    inputEl.addEventListener("focus", () => {
-      // 短暂清空再恢复，强制触发 suggestion 刷新
-      setTimeout(() => {
-        const current = this.input.value;
-        this.input.value = "";
-        this.input.dispatchEvent(new Event("input", { bubbles: true }));
-        this.input.value = current;
-        this.input.dispatchEvent(new Event("input", { bubbles: true }));
-      }, 50);
-    });
-  }
+  const folders = getAllFolders(app);
 
-  getSuggestions(query: string): TFolder[] {
-    const folders: TFolder[] = [];
-    this.app.vault.getAllLoadedFiles().forEach((file: TAbstractFile) => {
-      if (file instanceof TFolder) {
-        folders.push(file);
-      }
-    });
+  // 空选项
+  const emptyOpt = select.createEl("option");
+  emptyOpt.value = "";
+  emptyOpt.text = "— 未选择 —";
 
-    if (!query) return folders;
+  // 按层级渲染
+  folders.forEach((folder) => {
+    if (folder.path === "/") return; // 跳过根目录
 
-    const lower = query.toLowerCase();
-    return folders.filter((folder) =>
-      folder.path.toLowerCase().includes(lower)
-    );
-  }
+    const opt = select.createEl("option");
+    opt.value = folder.path;
 
-  renderSuggestion(folder: TFolder, el: HTMLElement): void {
+    // 用缩进箭头表示层级
     const depth = folder.path.split("/").length - 1;
     const name = folder.path.split("/").pop() || folder.path;
-    const parentPath = folder.path.includes("/")
-      ? folder.path.substring(0, folder.path.lastIndexOf("/")) + " ▸ "
-      : "";
+    const indent = depth > 0 ? "└ ".repeat(depth) : "";
+    opt.text = indent + name;
 
-    el.empty();
-    el.style.paddingLeft = `${depth * 12 + 4}px`;
-
-    if (parentPath) {
-      const parentSpan = el.createSpan({ text: parentPath });
-      parentSpan.style.color = "var(--text-muted)";
-      parentSpan.style.fontSize = "0.85em";
+    if (folder.path === selectedPath) {
+      opt.selected = true;
     }
+  });
 
-    const nameSpan = el.createSpan({ text: name });
-    nameSpan.style.fontWeight = "600";
+  select.addEventListener("change", () => {
+    onChange(select.value);
+  });
 
-    el.createSpan({
-      text: "  📁",
-      cls: "folder-suggest-icon",
-    });
-  }
-
-  selectSuggestion(folder: TFolder, _evt: MouseEvent | KeyboardEvent): void {
-    this.input.value = folder.path;
-    this.onChoose(folder);
-    this.close();
-  }
+  return select;
 }
 
 // ──────────────────────────────────────────────
@@ -103,18 +83,28 @@ export class RandomReviewSettingTab extends PluginSettingTab {
     // ── 笔记筛选 ──
     containerEl.createEl("h2", { text: "笔记筛选" });
 
-    // 目标文件夹（带自动补全）
-    const folderPathSetting = new Setting(containerEl)
+    // 目标文件夹 — 下拉选择
+    new Setting(containerEl)
       .setName("目标文件夹")
-      .setDesc("从中抽取笔记的文件夹路径，点击或输入自动列出全部目录");
-    this.addFolderSuggestInput(
-      folderPathSetting,
-      this.plugin.settings.folderPath,
-      async (folder) => {
-        this.plugin.settings.folderPath = folder.path;
-        await this.plugin.saveSettings();
-      }
-    );
+      .setDesc("从中抽取笔记的文件夹")
+      .addDropdown((dropdown) => {
+        const folders = getAllFolders(this.app);
+
+        dropdown.addOption("", "— 请选择 —");
+        folders.forEach((folder) => {
+          if (folder.path === "/") return;
+          const depth = folder.path.split("/").length - 1;
+          const name = folder.path.split("/").pop() || folder.path;
+          const indent = depth > 0 ? "└ ".repeat(depth) : "";
+          dropdown.addOption(folder.path, indent + name);
+        });
+
+        dropdown.setValue(this.plugin.settings.folderPath);
+        dropdown.onChange(async (value) => {
+          this.plugin.settings.folderPath = value;
+          await this.plugin.saveSettings();
+        });
+      });
 
     // 排除文件夹
     containerEl.createEl("h3", { text: "排除文件夹" });
@@ -126,41 +116,26 @@ export class RandomReviewSettingTab extends PluginSettingTab {
     const excludeContainer = containerEl.createDiv("exclude-folders-list");
 
     this.plugin.settings.excludeFolders.forEach((folderPath, index) => {
-      const itemDiv = excludeContainer.createDiv("exclude-folder-item");
-      itemDiv.style.display = "flex";
-      itemDiv.style.alignItems = "center";
-      itemDiv.style.gap = "8px";
-      itemDiv.style.marginBottom = "4px";
+      const row = excludeContainer.createDiv("exclude-folder-row");
+      row.style.display = "flex";
+      row.style.alignItems = "center";
+      row.style.gap = "8px";
+      row.style.marginBottom = "6px";
 
-      const inputWrapper = itemDiv.createDiv();
-      inputWrapper.style.flex = "1";
+      const selectWrapper = row.createDiv();
+      selectWrapper.style.flex = "1";
 
-      const textComponent = new Setting(inputWrapper).addText((text) =>
-        text.setValue(folderPath).setPlaceholder("选择要排除的文件夹…")
-      );
-
-      const inputEl = (textComponent as any).inputEl as HTMLInputElement;
-      new FolderSuggest(this.app, inputEl, async (f) => {
-        this.plugin.settings.excludeFolders[index] = f.path;
-        await this.plugin.saveSettings();
-      });
-
-      // 手动输入也保存
-      inputEl.addEventListener("change", async () => {
-        this.plugin.settings.excludeFolders[index] = inputEl.value.trim();
+      createFolderSelect(this.app, selectWrapper, folderPath, async (val) => {
+        this.plugin.settings.excludeFolders[index] = val;
         await this.plugin.saveSettings();
       });
 
       // 移除按钮
-      const removeBtn = itemDiv.createEl("button", {
-        text: "✕",
-        cls: "exclude-folder-remove-btn",
-      });
-      removeBtn.style.background = "none";
-      removeBtn.style.border = "none";
-      removeBtn.style.cursor = "pointer";
-      removeBtn.style.color = "var(--text-muted)";
-      removeBtn.style.fontSize = "1.2em";
+      const removeBtn = row.createEl("button");
+      removeBtn.setText("✕");
+      removeBtn.setAttr("aria-label", "移除");
+      removeBtn.style.cssText =
+        "background:none;border:none;cursor:pointer;color:var(--text-muted);font-size:1.2em;padding:0 4px;";
       removeBtn.addEventListener("click", async () => {
         this.plugin.settings.excludeFolders.splice(index, 1);
         await this.plugin.saveSettings();
@@ -168,7 +143,7 @@ export class RandomReviewSettingTab extends PluginSettingTab {
       });
     });
 
-    // 添加排除文件夹按钮
+    // 添加排除文件夹
     new Setting(containerEl).addButton((btn) =>
       btn.setButtonText("+ 添加排除文件夹").onClick(async () => {
         this.plugin.settings.excludeFolders.push("");
@@ -214,7 +189,7 @@ export class RandomReviewSettingTab extends PluginSettingTab {
     // ── 属性筛选 ──
     containerEl.createEl("h3", { text: "属性筛选" });
     containerEl.createEl("p", {
-      text: "多个条件同时满足（AND），格式：属性名=值，每行一个",
+      text: "多个条件同时满足（AND）",
       cls: "setting-item-description",
     });
 
@@ -294,28 +269,8 @@ export class RandomReviewSettingTab extends PluginSettingTab {
   }
 
   // ──────────────────────────────────────────
-  // 辅助方法
+  // 属性筛选行
   // ──────────────────────────────────────────
-
-  /**
-   * 添加带文件夹自动补全的文本输入
-   */
-  private addFolderSuggestInput(
-    setting: Setting,
-    initialPath: string,
-    onSelect: (folder: TFolder) => void
-  ): void {
-    setting.addText((text) => {
-      text.setValue(initialPath).setPlaceholder("点击选择或输入文件夹路径…");
-
-      const inputEl = (text as any).inputEl as HTMLInputElement;
-      new FolderSuggest(this.app, inputEl, onSelect);
-    });
-  }
-
-  /**
-   * 添加一条属性筛选行
-   */
   private addPropertyFilterSetting(
     containerEl: HTMLElement,
     filter: { key: string; value: string; operator: string },
