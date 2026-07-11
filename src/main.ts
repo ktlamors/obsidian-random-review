@@ -8,6 +8,7 @@ import {
   VIEW_TYPE_RANDOM_REVIEW,
   PLUGIN_NAME,
   RandomReviewSettings,
+  FolderProfile,
   DEFAULT_SETTINGS,
 } from "./constants";
 import { RandomReviewSettingTab } from "./settings";
@@ -77,8 +78,8 @@ export default class RandomReviewPlugin extends Plugin {
       }
     };
     fixCount(this.settings.propertyFilters);
-    for (const profile of Object.values(this.settings.profiles)) {
-      if (profile.propertyFilters) fixCount(profile.propertyFilters);
+    for (const profile of Object.values<FolderProfile>(this.settings.profiles)) {
+      if (profile.propertyFilters.length > 0) fixCount(profile.propertyFilters);
     }
 
     await this.saveSettings();
