@@ -20,7 +20,7 @@ export class ReviewView extends ItemView {
 
   private answerDefaultCollapsed: boolean = true;
   private showNavBar: boolean = true;
-  private editLeaf: WorkspaceLeaf | null = null;
+  private isEditing: boolean = false;
 
   constructor(leaf: WorkspaceLeaf) {
     super(leaf);
@@ -97,9 +97,10 @@ export class ReviewView extends ItemView {
   async onClose(): Promise<void> {
     this.containerEl.removeEventListener("keydown", this.boundHandleKeydown);
     // 关闭编辑侧边栏
-    if (this.editLeaf) {
-      this.editLeaf.detach();
-      this.editLeaf = null;
+    if (this.isEditing) {
+      const rightLeaf = this.app.workspace.getRightLeaf(false);
+      if (rightLeaf) rightLeaf.detach();
+      this.isEditing = false;
     }
   }
 
@@ -107,10 +108,11 @@ export class ReviewView extends ItemView {
    * 切换右侧编辑侧边栏
    */
   private async toggleEditLeaf(): Promise<void> {
-    if (this.editLeaf) {
+    if (this.isEditing) {
       // 关闭侧边栏
-      this.editLeaf.detach();
-      this.editLeaf = null;
+      const rightLeaf = this.app.workspace.getRightLeaf(false);
+      if (rightLeaf) rightLeaf.detach();
+      this.isEditing = false;
       this.editBtn.setText("编辑原笔记");
     } else {
       // 打开侧边栏编辑当前笔记
@@ -119,8 +121,8 @@ export class ReviewView extends ItemView {
 
       const leaf = this.app.workspace.getRightLeaf(false);
       if (!leaf) return;
-      this.editLeaf = leaf;
-      await this.editLeaf.openFile(file, { active: true });
+      await leaf.openFile(file, { active: true });
+      this.isEditing = true;
       this.editBtn.setText("关闭原笔记");
     }
   }
@@ -214,8 +216,11 @@ export class ReviewView extends ItemView {
       this.applyAnswerState();
 
       // 如果编辑侧边栏已打开，同步切换到新笔记
-      if (this.editLeaf) {
-        await this.editLeaf.openFile(file, { active: false });
+      if (this.isEditing) {
+        const rightLeaf = this.app.workspace.getRightLeaf(false);
+        if (rightLeaf) {
+          await rightLeaf.openFile(file, { active: false });
+        }
       }
 
       // 更新位置指示器和按钮状态
