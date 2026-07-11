@@ -21,6 +21,7 @@ export class ReviewView extends ItemView {
   private answerDefaultCollapsed: boolean = true;
   private showNavBar: boolean = true;
   private isEditing: boolean = false;
+  private editingFile: TFile | null = null;
 
   constructor(leaf: WorkspaceLeaf) {
     super(leaf);
@@ -96,41 +97,42 @@ export class ReviewView extends ItemView {
 
   async onClose(): Promise<void> {
     this.containerEl.removeEventListener("keydown", this.boundHandleKeydown);
-    if (this.isEditing) {
-      const rightLeaf = this.app.workspace.getRightLeaf(false);
-      if (rightLeaf) rightLeaf.detach();
-      (this.app as any).commands.executeCommandById("app:toggle-right-sidebar");
-      this.isEditing = false;
-    }
+    if (this.isEditing) this.closeEditPane();
   }
 
   /**
-   * 切换右侧编辑侧边栏
+   * 打开/关闭右侧编辑面板（主区域分屏，非 sidebar）
    */
   private async toggleEditLeaf(): Promise<void> {
     if (this.isEditing) {
-      // 关闭：清除内容后收起侧边栏
-      const rightLeaf = this.app.workspace.getRightLeaf(false);
-      if (rightLeaf) rightLeaf.detach();
-      (this.app as any).commands.executeCommandById("app:toggle-right-sidebar");
-      this.isEditing = false;
-      this.editBtn.setText("编辑原笔记");
+      this.closeEditPane();
     } else {
-      // 打开：展开侧边栏 + 打开笔记
       const file = this.queue[this.currentIndex];
       if (!file) return;
 
-      // 强制展开右侧边栏（关闭路径已将其收起，此处直接 toggle 打开）
-      (this.app as any).commands.executeCommandById("app:toggle-right-sidebar");
-      // 等待侧边栏展开完成
-      await new Promise((r) => setTimeout(r, 50));
-
-      const leaf = this.app.workspace.getRightLeaf(false);
-      if (!leaf) return;
-      await leaf.openFile(file, { active: true });
+      // 在主区域右侧创建分屏并打开笔记
+      const leaf = this.app.workspace.getLeaf("split", "vertical");
+      await leaf.openFile(file);
+      this.editingFile = file;
       this.isEditing = true;
       this.editBtn.setText("关闭原笔记");
     }
+  }
+
+  /** 关闭编辑分屏 */
+  private closeEditPane(): void {
+    // 找到并关闭我们打开的分屏
+    const leaves = this.app.workspace.getLeavesOfType("markdown");
+    for (const leaf of leaves) {
+      const view = leaf.view as any;
+      if (view?.file && view.file === this.editingFile) {
+        leaf.detach();
+        break;
+      }
+    }
+    this.isEditing = false;
+    this.editingFile = null;
+    this.editBtn.setText("编辑原笔记");
   }
 
   /**
@@ -221,11 +223,16 @@ export class ReviewView extends ItemView {
       // 应用答案可见性状态
       this.applyAnswerState();
 
-      // 如果编辑侧边栏已打开，同步切换到新笔记
+      // 如果编辑面板已打开，同步切换到新笔记
       if (this.isEditing) {
-        const rightLeaf = this.app.workspace.getRightLeaf(false);
-        if (rightLeaf) {
-          await rightLeaf.openFile(file, { active: false });
+        const leaves = this.app.workspace.getLeavesOfType("markdown");
+        for (const leaf of leaves) {
+          const view = leaf.view as any;
+          if (view?.file && view.file === this.editingFile) {
+            await leaf.openFile(file, { active: false });
+            this.editingFile = file;
+            break;
+          }
         }
       }
 
