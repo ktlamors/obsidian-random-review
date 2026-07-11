@@ -96,7 +96,6 @@ export class ReviewView extends ItemView {
 
   async onClose(): Promise<void> {
     this.containerEl.removeEventListener("keydown", this.boundHandleKeydown);
-    // 关闭编辑侧边栏
     if (this.isEditing) {
       const rightLeaf = this.app.workspace.getRightLeaf(false);
       if (rightLeaf) rightLeaf.detach();
@@ -110,17 +109,22 @@ export class ReviewView extends ItemView {
    */
   private async toggleEditLeaf(): Promise<void> {
     if (this.isEditing) {
-      // 关闭侧边栏：先清除内容，再收起面板
+      // 关闭：清除内容后收起侧边栏
       const rightLeaf = this.app.workspace.getRightLeaf(false);
       if (rightLeaf) rightLeaf.detach();
-      // 收起右侧边栏
       (this.app as any).commands.executeCommandById("app:toggle-right-sidebar");
       this.isEditing = false;
       this.editBtn.setText("编辑原笔记");
     } else {
-      // 打开侧边栏编辑当前笔记
+      // 打开：先确保侧边栏展开，再打开笔记
       const file = this.queue[this.currentIndex];
       if (!file) return;
+
+      // 强制展开右侧边栏
+      const workspace = this.app.workspace as any;
+      if (!workspace.rightSplit || workspace.rightSplit.collapsed) {
+        workspace.commands.executeCommandById("app:toggle-right-sidebar");
+      }
 
       const leaf = this.app.workspace.getRightLeaf(false);
       if (!leaf) return;
