@@ -190,22 +190,23 @@ export class ReviewView extends ItemView {
    * 应用答案折叠/展开状态到 DOM
    */
   private applyAnswerState(): void {
-    // 宽泛匹配所有 callout（含不同渲染场景下的 class 变体）
-    const callouts = this.noteContentEl.querySelectorAll(
-      ".callout.is-collapsible, .callout[data-callout]"
-    );
-    callouts.forEach((el) => {
-      if (!(el instanceof HTMLElement)) return;
-      const content = el.querySelector(".callout-content") as HTMLElement | null;
+    // 直接操控 .callout-content 元素的显示状态（绕过 CSS class 依赖）
+    const contents = this.noteContentEl.querySelectorAll(".callout-content");
+    contents.forEach((el) => {
+      if (el instanceof HTMLElement) {
+        el.style.display = this.answerVisible ? "" : "none";
+      }
+    });
 
-      if (this.answerVisible) {
-        el.classList.remove("is-collapsed");
-        // 兜底：直接恢复内容显示
-        if (content) content.style.display = "";
-      } else {
-        el.classList.add("is-collapsed");
-        // 兜底：直接隐藏内容
-        if (content) content.style.display = "none";
+    // 同步更新 callout 的 is-collapsed class（保持折叠箭头图标一致）
+    const callouts = this.noteContentEl.querySelectorAll(".callout");
+    callouts.forEach((el) => {
+      if (el instanceof HTMLElement) {
+        if (this.answerVisible) {
+          el.classList.remove("is-collapsed");
+        } else {
+          el.classList.add("is-collapsed");
+        }
       }
     });
   }
