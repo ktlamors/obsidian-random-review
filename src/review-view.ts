@@ -100,6 +100,7 @@ export class ReviewView extends ItemView {
     if (this.isEditing) {
       const rightLeaf = this.app.workspace.getRightLeaf(false);
       if (rightLeaf) rightLeaf.detach();
+      (this.app as any).commands.executeCommandById("app:toggle-right-sidebar");
       this.isEditing = false;
     }
   }
@@ -109,9 +110,11 @@ export class ReviewView extends ItemView {
    */
   private async toggleEditLeaf(): Promise<void> {
     if (this.isEditing) {
-      // 关闭侧边栏
+      // 关闭侧边栏：先清除内容，再收起面板
       const rightLeaf = this.app.workspace.getRightLeaf(false);
       if (rightLeaf) rightLeaf.detach();
+      // 收起右侧边栏
+      (this.app as any).commands.executeCommandById("app:toggle-right-sidebar");
       this.isEditing = false;
       this.editBtn.setText("编辑原笔记");
     } else {
