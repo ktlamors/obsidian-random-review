@@ -169,15 +169,6 @@ export class ReviewView extends ItemView {
         this
       );
 
-      // 放大字体 — 内联样式保证最高优先级
-      markdownContainer.querySelectorAll(
-        "p, li, blockquote, td, th, .callout-content, .callout-title-inner, span"
-      ).forEach((el) => {
-        if (el instanceof HTMLElement && !el.style.fontSize) {
-          el.style.fontSize = "2em";
-        }
-      });
-
       // 应用答案可见性状态
       this.applyAnswerState();
 

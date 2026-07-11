@@ -50,7 +50,11 @@
   max-width: 800px;
   width: 100%;
   margin: 0 auto;
-  line-height: 1.9;
+}
+
+.random-review-content .markdown-preview-view {
+  font-size: 1em;
+  line-height: 1.8;
 }
 
 /* 空状态和错误状态 */
