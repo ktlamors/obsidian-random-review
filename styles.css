@@ -50,11 +50,20 @@
   max-width: 800px;
   width: 100%;
   margin: 0 auto;
+  font-size: 1.25em;
+  line-height: 1.9;
+}
+
+.random-review-content p,
+.random-review-content li,
+.random-review-content blockquote,
+.random-review-content table,
+.random-review-content .callout-content {
+  font-size: 1.1em;
 }
 
 .random-review-content .markdown-preview-view {
-  font-size: 1.25em;
-  line-height: 1.9;
+  font-size: inherit;
 }
 
 /* 空状态和错误状态 */
