@@ -15,8 +15,6 @@ export function extractNotes(
   // 2. 按文件夹筛选
   if (settings.folderPath) {
     const normalizedPath = settings.folderPath.replace(/^\/+|\/+$/g, "");
-    files = files.filter((file) => file.path.startsWith(normalizedPath + "/") || file.path.startsWith(normalizedPath));
-    // Also include files directly in the folder (path === folderPath not possible for files)
     files = files.filter((file) => {
       const dir = file.path.substring(0, file.path.lastIndexOf("/"));
       return dir === normalizedPath || file.path.startsWith(normalizedPath + "/");
