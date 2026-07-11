@@ -116,15 +116,14 @@ export class ReviewView extends ItemView {
       this.isEditing = false;
       this.editBtn.setText("编辑原笔记");
     } else {
-      // 打开：先确保侧边栏展开，再打开笔记
+      // 打开：展开侧边栏 + 打开笔记
       const file = this.queue[this.currentIndex];
       if (!file) return;
 
-      // 强制展开右侧边栏
-      const workspace = this.app.workspace as any;
-      if (!workspace.rightSplit || workspace.rightSplit.collapsed) {
-        workspace.commands.executeCommandById("app:toggle-right-sidebar");
-      }
+      // 强制展开右侧边栏（关闭路径已将其收起，此处直接 toggle 打开）
+      (this.app as any).commands.executeCommandById("app:toggle-right-sidebar");
+      // 等待侧边栏展开完成
+      await new Promise((r) => setTimeout(r, 50));
 
       const leaf = this.app.workspace.getRightLeaf(false);
       if (!leaf) return;
