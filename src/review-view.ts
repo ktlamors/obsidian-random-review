@@ -93,6 +93,21 @@ export class ReviewView extends ItemView {
 
     // 键盘事件
     this.containerEl.addEventListener("keydown", this.boundHandleKeydown);
+
+    // 监听布局变化，检测编辑分屏是否被手动关闭
+    this.registerEvent(
+      this.app.workspace.on("layout-change", () => {
+        if (!this.isEditing || !this.editingFile) return;
+        const stillOpen = this.app.workspace
+          .getLeavesOfType("markdown")
+          .some((l) => (l.view as any)?.file === this.editingFile);
+        if (!stillOpen) {
+          this.isEditing = false;
+          this.editingFile = null;
+          this.editBtn.setText("编辑原笔记");
+        }
+      })
+    );
   }
 
   async onClose(): Promise<void> {
