@@ -6,6 +6,7 @@ export interface PropertyFilter {
   key: string;
   value: string;
   operator: "equals" | "contains" | "not-equals";
+  count: number; // 此条件下抽取的数量，0 表示使用全局 pickCount
 }
 
 export interface RandomReviewSettings {

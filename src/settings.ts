@@ -242,7 +242,7 @@ export class RandomReviewSettingTab extends PluginSettingTab {
     // ── 属性筛选 ──
     containerEl.createEl("h3", { text: "属性筛选" });
     containerEl.createEl("p", {
-      text: "多个条件同时满足（AND）",
+      text: "按属性分别抽取，各条件独立匹配（OR），合并后随机排列",
       cls: "setting-item-description",
     });
 
@@ -256,6 +256,7 @@ export class RandomReviewSettingTab extends PluginSettingTab {
           key: "",
           value: "",
           operator: "equals",
+          count: 0,
         });
         await this.plugin.saveSettings();
         this.display();
@@ -326,7 +327,7 @@ export class RandomReviewSettingTab extends PluginSettingTab {
   // ──────────────────────────────────────────
   private addPropertyFilterSetting(
     containerEl: HTMLElement,
-    filter: { key: string; value: string; operator: string },
+    filter: { key: string; value: string; operator: string; count: number },
     index: number
   ): void {
     const setting = new Setting(containerEl);
@@ -348,6 +349,18 @@ export class RandomReviewSettingTab extends PluginSettingTab {
           await this.plugin.saveSettings();
         })
     );
+    setting.addText((text) => {
+      text
+        .setPlaceholder("数量")
+        .setValue(String(filter.count || ""))
+        .onChange(async (value) => {
+          const num = parseInt(value);
+          this.plugin.settings.propertyFilters[index].count =
+            isNaN(num) ? 0 : Math.max(0, num);
+          await this.plugin.saveSettings();
+        });
+      text.inputEl.style.width = "60px";
+    });
     setting.addExtraButton((btn) =>
       btn
         .setIcon("cross")
