@@ -73,11 +73,26 @@ export default class RandomReviewPlugin extends Plugin {
   }
 
   async loadSettings(): Promise<void> {
-    this.settings = Object.assign(
-      {},
-      DEFAULT_SETTINGS,
-      await this.loadData()
-    );
+    const data = await this.loadData();
+    this.settings = Object.assign({}, DEFAULT_SETTINGS, data);
+
+    // 迁移旧数据：确保 profiles 存在
+    if (!this.settings.profiles) {
+      this.settings.profiles = {};
+    }
+
+    // 迁移旧数据：确保所有 propertyFilters 有 count 字段
+    const fixCount = (filters: any[]) => {
+      filters.forEach((f) => {
+        if (f.count === undefined) f.count = 0;
+      });
+    };
+    fixCount(this.settings.propertyFilters);
+    Object.values(this.settings.profiles).forEach((p: any) => {
+      if (p.propertyFilters) fixCount(p.propertyFilters);
+    });
+
+    await this.saveSettings();
   }
 
   async saveSettings(): Promise<void> {
