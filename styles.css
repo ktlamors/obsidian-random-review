@@ -26,6 +26,22 @@
   white-space: nowrap;
 }
 
+.random-review-edit-btn {
+  background: none;
+  border: 1px solid var(--background-modifier-border);
+  font-size: 0.85em;
+  cursor: pointer;
+  color: var(--text-muted);
+  padding: 4px 10px;
+  border-radius: 4px;
+  white-space: nowrap;
+}
+
+.random-review-edit-btn:hover {
+  background: var(--background-modifier-hover);
+  color: var(--text-normal);
+}
+
 .random-review-exit-btn {
   background: none;
   border: none;

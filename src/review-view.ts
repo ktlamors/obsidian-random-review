@@ -16,9 +16,11 @@ export class ReviewView extends ItemView {
   private nextBtn!: HTMLButtonElement;
   private toggleAnswerBtn!: HTMLButtonElement;
   private exitBtn!: HTMLButtonElement;
+  private editBtn!: HTMLButtonElement;
 
   private answerDefaultCollapsed: boolean = true;
   private showNavBar: boolean = true;
+  private editLeaf: WorkspaceLeaf | null = null;
 
   constructor(leaf: WorkspaceLeaf) {
     super(leaf);
@@ -44,7 +46,19 @@ export class ReviewView extends ItemView {
     // 顶部栏
     this.topBarEl = container.createDiv("random-review-topbar");
     this.titleEl = this.topBarEl.createSpan("random-review-title");
-    this.exitBtn = this.topBarEl.createEl("button", {
+
+    const topRight = this.topBarEl.createDiv();
+    topRight.style.display = "flex";
+    topRight.style.alignItems = "center";
+    topRight.style.gap = "8px";
+
+    this.editBtn = topRight.createEl("button", {
+      text: "编辑原笔记",
+      cls: "random-review-edit-btn",
+    });
+    this.editBtn.addEventListener("click", () => this.toggleEditLeaf());
+
+    this.exitBtn = topRight.createEl("button", {
       text: "✕",
       cls: "random-review-exit-btn",
     });
@@ -82,6 +96,33 @@ export class ReviewView extends ItemView {
 
   async onClose(): Promise<void> {
     this.containerEl.removeEventListener("keydown", this.boundHandleKeydown);
+    // 关闭编辑侧边栏
+    if (this.editLeaf) {
+      this.editLeaf.detach();
+      this.editLeaf = null;
+    }
+  }
+
+  /**
+   * 切换右侧编辑侧边栏
+   */
+  private async toggleEditLeaf(): Promise<void> {
+    if (this.editLeaf) {
+      // 关闭侧边栏
+      this.editLeaf.detach();
+      this.editLeaf = null;
+      this.editBtn.setText("编辑原笔记");
+    } else {
+      // 打开侧边栏编辑当前笔记
+      const file = this.queue[this.currentIndex];
+      if (!file) return;
+
+      const leaf = this.app.workspace.getRightLeaf(false);
+      if (!leaf) return;
+      this.editLeaf = leaf;
+      await this.editLeaf.openFile(file, { active: true });
+      this.editBtn.setText("关闭原笔记");
+    }
   }
 
   /**
@@ -171,6 +212,11 @@ export class ReviewView extends ItemView {
 
       // 应用答案可见性状态
       this.applyAnswerState();
+
+      // 如果编辑侧边栏已打开，同步切换到新笔记
+      if (this.editLeaf) {
+        await this.editLeaf.openFile(file, { active: false });
+      }
 
       // 更新位置指示器和按钮状态
       this.updateUIState();
