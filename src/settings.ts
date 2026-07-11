@@ -6,7 +6,7 @@ import {
   TAbstractFile,
 } from "obsidian";
 import type RandomReviewPlugin from "./main";
-import { FolderProfile, DEFAULT_PROFILE } from "./constants";
+import { DEFAULT_PROFILE } from "./constants";
 
 // ──────────────────────────────────────────────
 // 工具函数
@@ -48,7 +48,7 @@ function createFolderSelect(
   onChange: (path: string) => void
 ): HTMLSelectElement {
   const select = containerEl.createEl("select");
-  select.style.width = "100%";
+  select.addClass("dropdown");
   const folders = getSubFolders(app, parentPath, includeParent);
   const emptyOpt = select.createEl("option");
   emptyOpt.value = "";
@@ -82,7 +82,7 @@ export class RandomReviewSettingTab extends PluginSettingTab {
     containerEl.empty();
 
     // ── 笔记筛选 ──
-    containerEl.createEl("h2", { text: "笔记筛选" });
+    new Setting(containerEl).setName("笔记筛选").setHeading();
 
     // 目标文件夹
     new Setting(containerEl)
@@ -99,49 +99,35 @@ export class RandomReviewSettingTab extends PluginSettingTab {
         });
         dropdown.setValue(this.plugin.settings.folderPath);
         dropdown.onChange(async (value) => {
-          // 保存旧配置
           this.saveCurrentToProfile();
-          // 切换到新文件夹
           this.plugin.settings.folderPath = value;
-          // 加载新配置（如果有）
           this.loadProfile(value);
           await this.plugin.saveSettings();
           this.display();
         });
       });
 
-    // ── 配置档案管理 ──
+    // 配置档案
     const profileKeys = Object.keys(this.plugin.settings.profiles);
     if (profileKeys.length > 0) {
-      containerEl.createEl("h3", { text: "历史配置档案" });
+      new Setting(containerEl).setName("历史配置档案").setHeading();
       containerEl.createEl("p", {
-        text: "点击文件夹名快速切换并加载对应配置",
+        text: "点击切换配置，右键删除",
         cls: "setting-item-description",
       });
 
-      const profileList = containerEl.createDiv("profile-list");
-      profileList.style.display = "flex";
-      profileList.style.flexWrap = "wrap";
-      profileList.style.gap = "6px";
-      profileList.style.marginBottom = "12px";
+      const profileList = containerEl.createDiv("profile-tag-list");
 
       profileKeys.forEach((path) => {
-        const tag = profileList.createEl("button");
+        const tag = profileList.createEl("button", { cls: "profile-tag" });
         const shortName = path.split("/").pop() || path;
         tag.setText(shortName);
         tag.setAttr("title", path);
-        tag.style.cssText =
-          "padding:4px 10px;border:1px solid var(--background-modifier-border);" +
-          "border-radius:12px;cursor:pointer;font-size:0.85em;" +
-          "background:var(--background-secondary);";
 
-        // 当前文件夹高亮
         if (path === this.plugin.settings.folderPath) {
-          tag.style.borderColor = "var(--interactive-accent)";
-          tag.style.color = "var(--interactive-accent)";
+          tag.addClass("profile-tag-active");
         }
 
-        // 点击切换
         tag.addEventListener("click", async () => {
           this.saveCurrentToProfile();
           this.plugin.settings.folderPath = path;
@@ -150,7 +136,6 @@ export class RandomReviewSettingTab extends PluginSettingTab {
           this.display();
         });
 
-        // 右键删除
         tag.addEventListener("contextmenu", async (e) => {
           e.preventDefault();
           delete this.plugin.settings.profiles[path];
@@ -162,14 +147,12 @@ export class RandomReviewSettingTab extends PluginSettingTab {
         });
       });
 
-      const hint = containerEl.createEl("p");
-      hint.style.fontSize = "0.8em";
-      hint.style.color = "var(--text-muted)";
+      const hint = containerEl.createEl("p", { cls: "profile-hint" });
       hint.setText("右键点击档案标签可删除");
     }
 
     // 排除文件夹
-    containerEl.createEl("h3", { text: "排除文件夹" });
+    new Setting(containerEl).setName("排除文件夹").setHeading();
     if (!this.plugin.settings.folderPath) {
       containerEl.createEl("p", {
         text: "请先选择目标文件夹",
@@ -183,12 +166,7 @@ export class RandomReviewSettingTab extends PluginSettingTab {
       const excludeContainer = containerEl.createDiv("exclude-folders-list");
       this.plugin.settings.excludeFolders.forEach((folderPath, index) => {
         const row = excludeContainer.createDiv("exclude-folder-row");
-        row.style.display = "flex";
-        row.style.alignItems = "center";
-        row.style.gap = "8px";
-        row.style.marginBottom = "6px";
-        const sw = row.createDiv();
-        sw.style.flex = "1";
+        const sw = row.createDiv("exclude-folder-select");
         createFolderSelect(
           this.app, sw, folderPath,
           this.plugin.settings.folderPath, false,
@@ -197,11 +175,9 @@ export class RandomReviewSettingTab extends PluginSettingTab {
             await this.plugin.saveSettings();
           }
         );
-        const rb = row.createEl("button");
+        const rb = row.createEl("button", { cls: "exclude-folder-remove" });
         rb.setText("✕");
         rb.setAttr("aria-label", "移除");
-        rb.style.cssText =
-          "background:none;border:none;cursor:pointer;color:var(--text-muted);font-size:1.2em;padding:0 4px;";
         rb.addEventListener("click", async () => {
           this.plugin.settings.excludeFolders.splice(index, 1);
           await this.plugin.saveSettings();
@@ -252,7 +228,7 @@ export class RandomReviewSettingTab extends PluginSettingTab {
       );
 
     // ── 属性筛选 ──
-    containerEl.createEl("h3", { text: "属性筛选" });
+    new Setting(containerEl).setName("属性筛选").setHeading();
     containerEl.createEl("p", {
       text: "按属性分别抽取，各条件独立匹配（OR），合并后随机排列",
       cls: "setting-item-description",
@@ -271,7 +247,7 @@ export class RandomReviewSettingTab extends PluginSettingTab {
     );
 
     // ── 抽取规则 ──
-    containerEl.createEl("h2", { text: "抽取规则" });
+    new Setting(containerEl).setName("抽取规则").setHeading();
     new Setting(containerEl)
       .setName("抽取数量")
       .setDesc("未设置属性筛选时的默认抽取数量")
@@ -297,7 +273,7 @@ export class RandomReviewSettingTab extends PluginSettingTab {
       );
 
     // ── 显示设置 ──
-    containerEl.createEl("h2", { text: "显示设置" });
+    new Setting(containerEl).setName("显示设置").setHeading();
     new Setting(containerEl)
       .setName("答案默认折叠")
       .addToggle((toggle) =>
@@ -319,10 +295,9 @@ export class RandomReviewSettingTab extends PluginSettingTab {
   }
 
   // ──────────────────────────────────────────
-  // 配置档案操作
+  // 配置档案
   // ──────────────────────────────────────────
 
-  /** 将当前配置保存到当前文件夹的档案中 */
   private saveCurrentToProfile(): void {
     const path = this.plugin.settings.folderPath;
     if (!path) return;
@@ -336,7 +311,6 @@ export class RandomReviewSettingTab extends PluginSettingTab {
     };
   }
 
-  /** 从档案加载指定文件夹的配置；无档案时使用默认值 */
   private loadProfile(folderPath: string): void {
     const saved = this.plugin.settings.profiles[folderPath];
     if (saved) {
@@ -347,7 +321,6 @@ export class RandomReviewSettingTab extends PluginSettingTab {
       this.plugin.settings.pickCount = saved.pickCount;
       this.plugin.settings.randomOrder = saved.randomOrder;
     } else {
-      // 使用默认值
       this.plugin.settings.excludeFolders = [...DEFAULT_PROFILE.excludeFolders];
       this.plugin.settings.includeTags = [...DEFAULT_PROFILE.includeTags];
       this.plugin.settings.excludeTags = [...DEFAULT_PROFILE.excludeTags];
@@ -384,7 +357,7 @@ export class RandomReviewSettingTab extends PluginSettingTab {
         this.plugin.settings.propertyFilters[index].count = isNaN(n) ? 0 : Math.max(0, n);
         await this.plugin.saveSettings();
       });
-      text.inputEl.style.width = "60px";
+      text.inputEl.addClass("property-count-input");
     });
     setting.addExtraButton((btn) =>
       btn.setIcon("cross").setTooltip("移除").onClick(async () => {

@@ -2,7 +2,7 @@
   "id": "random-review",
   "name": "Random Review",
   "version": "1.0.0",
-  "minAppVersion": "1.0.0",
+  "minAppVersion": "1.7.0",
   "description": "Randomly select notes from specified folders with tag and property filtering, and review them in fullscreen.",
   "author": "TimeLine",
   "authorUrl": "https://github.com/ktlamors",

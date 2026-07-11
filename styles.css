@@ -7,6 +7,11 @@
   background: var(--background-primary);
 }
 
+/* Utility */
+.random-review-hidden {
+  display: none !important;
+}
+
 /* 顶部栏 */
 .random-review-topbar {
   display: flex;
@@ -15,6 +20,12 @@
   padding: 12px 20px;
   border-bottom: 1px solid var(--background-modifier-border);
   flex-shrink: 0;
+}
+
+.random-review-topright {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .random-review-title {
@@ -71,6 +82,14 @@
 .random-review-content .markdown-preview-view {
   font-size: 1em;
   line-height: 1.8;
+}
+
+/* 答案显示/隐藏 */
+.random-review-hide-answers .callout-content {
+  display: none;
+}
+.random-review-show-answers .callout-content {
+  display: unset;
 }
 
 /* 空状态和错误状态 */
@@ -148,6 +167,65 @@
 
 .random-review-toggle-btn:hover {
   background: var(--interactive-accent-hover);
+}
+
+/* 设置面板 */
+.profile-tag-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.profile-tag {
+  padding: 4px 10px;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 12px;
+  cursor: pointer;
+  font-size: 0.85em;
+  background: var(--background-secondary);
+}
+
+.profile-tag:hover {
+  background: var(--background-modifier-hover);
+}
+
+.profile-tag-active {
+  border-color: var(--interactive-accent);
+  color: var(--interactive-accent);
+}
+
+.profile-hint {
+  font-size: 0.8em;
+  color: var(--text-muted);
+}
+
+.exclude-folder-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.exclude-folder-select {
+  flex: 1;
+}
+
+.exclude-folder-remove {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text-muted);
+  font-size: 1.2em;
+  padding: 0 4px;
+}
+
+.exclude-folder-remove:hover {
+  color: var(--text-error);
+}
+
+.property-count-input {
+  width: 60px;
 }
 
 /* 响应式：小屏幕适配 */

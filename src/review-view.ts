@@ -1,4 +1,11 @@
-import { ItemView, WorkspaceLeaf, TFile, MarkdownRenderer, Notice } from "obsidian";
+import {
+  ItemView,
+  WorkspaceLeaf,
+  TFile,
+  MarkdownRenderer,
+  Notice,
+  MarkdownView,
+} from "obsidian";
 import { VIEW_TYPE_RANDOM_REVIEW } from "./constants";
 
 export class ReviewView extends ItemView {
@@ -48,16 +55,15 @@ export class ReviewView extends ItemView {
     this.topBarEl = container.createDiv("random-review-topbar");
     this.titleEl = this.topBarEl.createSpan("random-review-title");
 
-    const topRight = this.topBarEl.createDiv();
-    topRight.style.display = "flex";
-    topRight.style.alignItems = "center";
-    topRight.style.gap = "8px";
+    const topRight = this.topBarEl.createDiv("random-review-topright");
 
     this.editBtn = topRight.createEl("button", {
       text: "编辑原笔记",
       cls: "random-review-edit-btn",
     });
-    this.editBtn.addEventListener("click", () => this.toggleEditLeaf());
+    this.editBtn.addEventListener("click", () => {
+      void this.toggleEditLeaf();
+    });
 
     this.exitBtn = topRight.createEl("button", {
       text: "✕",
@@ -75,7 +81,9 @@ export class ReviewView extends ItemView {
       text: "← 上一题",
       cls: "random-review-nav-btn",
     });
-    this.prevBtn.addEventListener("click", () => this.navigate(-1));
+    this.prevBtn.addEventListener("click", () => {
+      void this.navigate(-1);
+    });
 
     this.positionEl = this.navBarEl.createSpan("random-review-position");
 
@@ -83,7 +91,9 @@ export class ReviewView extends ItemView {
       text: "下一题 →",
       cls: "random-review-nav-btn",
     });
-    this.nextBtn.addEventListener("click", () => this.navigate(1));
+    this.nextBtn.addEventListener("click", () => {
+      void this.navigate(1);
+    });
 
     this.toggleAnswerBtn = this.navBarEl.createEl("button", {
       text: "显示答案",
@@ -100,7 +110,10 @@ export class ReviewView extends ItemView {
         if (!this.isEditing || !this.editingFile) return;
         const stillOpen = this.app.workspace
           .getLeavesOfType("markdown")
-          .some((l) => (l.view as any)?.file === this.editingFile);
+          .some((l) => {
+            const view = l.view;
+            return view instanceof MarkdownView && view.file === this.editingFile;
+          });
         if (!stillOpen) {
           this.isEditing = false;
           this.editingFile = null;
@@ -115,7 +128,7 @@ export class ReviewView extends ItemView {
         if (!(file instanceof TFile)) return;
         const current = this.queue[this.currentIndex];
         if (current && file.path === current.path) {
-          this.renderNote(this.currentIndex);
+          void this.renderNote(this.currentIndex);
         }
       })
     );
@@ -126,9 +139,6 @@ export class ReviewView extends ItemView {
     if (this.isEditing) this.closeEditPane();
   }
 
-  /**
-   * 打开/关闭右侧编辑面板（主区域分屏，非 sidebar）
-   */
   private async toggleEditLeaf(): Promise<void> {
     if (this.isEditing) {
       this.closeEditPane();
@@ -136,8 +146,7 @@ export class ReviewView extends ItemView {
       const file = this.queue[this.currentIndex];
       if (!file) return;
 
-      // 在主区域右侧创建分屏并打开笔记
-      const leaf = this.app.workspace.getLeaf("split", "vertical");
+      const leaf = this.app.workspace.getLeaf("split");
       await leaf.openFile(file);
       this.editingFile = file;
       this.isEditing = true;
@@ -145,13 +154,11 @@ export class ReviewView extends ItemView {
     }
   }
 
-  /** 关闭编辑分屏 */
   private closeEditPane(): void {
-    // 找到并关闭我们打开的分屏
     const leaves = this.app.workspace.getLeavesOfType("markdown");
     for (const leaf of leaves) {
-      const view = leaf.view as any;
-      if (view?.file && view.file === this.editingFile) {
+      const view = leaf.view;
+      if (view instanceof MarkdownView && view.file === this.editingFile) {
         leaf.detach();
         break;
       }
@@ -161,9 +168,6 @@ export class ReviewView extends ItemView {
     this.editBtn.setText("编辑原笔记");
   }
 
-  /**
-   * 由外部调用，设置笔记队列并开始复习
-   */
   async startReview(
     queue: TFile[],
     answerDefaultCollapsed: boolean,
@@ -174,11 +178,13 @@ export class ReviewView extends ItemView {
     this.answerDefaultCollapsed = answerDefaultCollapsed;
     this.showNavBar = showNavBar;
 
-    // 设置答案初始状态
     this.answerVisible = !answerDefaultCollapsed;
 
-    // 更新导航栏显示
-    this.navBarEl.style.display = showNavBar ? "flex" : "none";
+    if (showNavBar) {
+      this.navBarEl.removeClass("random-review-hidden");
+    } else {
+      this.navBarEl.addClass("random-review-hidden");
+    }
 
     if (queue.length === 0) {
       this.renderEmptyState();
@@ -188,11 +194,8 @@ export class ReviewView extends ItemView {
     await this.renderNote(0);
   }
 
-  /**
-   * 渲染空状态
-   */
   private renderEmptyState(): void {
-    this.topBarEl.style.display = "none";
+    this.topBarEl.addClass("random-review-hidden");
     this.noteContentEl.empty();
     this.noteContentEl.createDiv("random-review-empty");
     const emptyDiv = this.noteContentEl.querySelector(".random-review-empty");
@@ -202,19 +205,15 @@ export class ReviewView extends ItemView {
     }
     this.prevBtn.disabled = true;
     this.nextBtn.disabled = true;
-    this.toggleAnswerBtn.style.display = "none";
+    this.toggleAnswerBtn.addClass("random-review-hidden");
   }
 
-  /**
-   * 渲染指定位置的笔记
-   */
   private async renderNote(index: number): Promise<void> {
     if (index < 0 || index >= this.queue.length) return;
 
     this.currentIndex = index;
     const file = this.queue[index];
 
-    // 检查文件是否仍然存在
     const exists = await this.app.vault.adapter.exists(file.path);
     if (!exists) {
       new Notice(`笔记 "${file.basename}" 已被删除，自动跳过`);
@@ -223,19 +222,16 @@ export class ReviewView extends ItemView {
         this.renderEmptyState();
         return;
       }
-      // 跳到下一篇（或上一篇如果在末尾）
       const newIndex = Math.min(index, this.queue.length - 1);
       await this.renderNote(newIndex);
       return;
     }
 
-    // 读取并渲染笔记内容
     try {
       const content = await this.app.vault.read(file);
       this.titleEl.setText(file.basename);
-      this.topBarEl.style.display = "flex";
+      this.topBarEl.removeClass("random-review-hidden");
 
-      // 清空并渲染 Markdown
       this.noteContentEl.empty();
       const markdownContainer = this.noteContentEl.createDiv("markdown-preview-view");
       await MarkdownRenderer.render(
@@ -246,15 +242,14 @@ export class ReviewView extends ItemView {
         this
       );
 
-      // 应用答案可见性状态
       this.applyAnswerState();
 
       // 如果编辑面板已打开，同步切换到新笔记
       if (this.isEditing) {
         const leaves = this.app.workspace.getLeavesOfType("markdown");
         for (const leaf of leaves) {
-          const view = leaf.view as any;
-          if (view?.file && view.file === this.editingFile) {
+          const view = leaf.view;
+          if (view instanceof MarkdownView && view.file === this.editingFile) {
             await leaf.openFile(file, { active: false });
             this.editingFile = file;
             break;
@@ -262,7 +257,6 @@ export class ReviewView extends ItemView {
         }
       }
 
-      // 更新位置指示器和按钮状态
       this.updateUIState();
     } catch (err) {
       this.noteContentEl.empty();
@@ -276,34 +270,26 @@ export class ReviewView extends ItemView {
     }
   }
 
-  /**
-   * 应用答案折叠/展开状态到 DOM
-   */
   private applyAnswerState(): void {
-    // 直接操控 .callout-content 元素的显示状态（绕过 CSS class 依赖）
-    const contents = this.noteContentEl.querySelectorAll(".callout-content");
-    contents.forEach((el) => {
-      if (el instanceof HTMLElement) {
-        el.style.display = this.answerVisible ? "" : "none";
-      }
-    });
+    // 用 CSS class 控制答案显示，避免 inline style
+    if (this.answerVisible) {
+      this.noteContentEl.removeClass("random-review-hide-answers");
+      this.noteContentEl.addClass("random-review-show-answers");
+    } else {
+      this.noteContentEl.removeClass("random-review-show-answers");
+      this.noteContentEl.addClass("random-review-hide-answers");
+    }
 
-    // 同步更新 callout 的 is-collapsed class（保持折叠箭头图标一致）
     const callouts = this.noteContentEl.querySelectorAll(".callout");
     callouts.forEach((el) => {
-      if (el instanceof HTMLElement) {
-        if (this.answerVisible) {
-          el.classList.remove("is-collapsed");
-        } else {
-          el.classList.add("is-collapsed");
-        }
+      if (this.answerVisible) {
+        el.classList.remove("is-collapsed");
+      } else {
+        el.classList.add("is-collapsed");
       }
     });
   }
 
-  /**
-   * 更新导航栏按钮状态
-   */
   private updateUIState(): void {
     this.prevBtn.disabled = this.currentIndex <= 0;
     this.nextBtn.disabled = this.currentIndex >= this.queue.length - 1;
@@ -314,23 +300,20 @@ export class ReviewView extends ItemView {
       this.answerVisible ? "隐藏答案" : "显示答案"
     );
 
-    // 只有一篇笔记时隐藏导航按钮
     const singleNote = this.queue.length <= 1;
-    this.navBarEl.style.display = singleNote ? "none" : (this.showNavBar ? "flex" : "none");
+    if (singleNote || !this.showNavBar) {
+      this.navBarEl.addClass("random-review-hidden");
+    } else {
+      this.navBarEl.removeClass("random-review-hidden");
+    }
   }
 
-  /**
-   * 上一题 / 下一题
-   */
   private async navigate(delta: number): Promise<void> {
     const newIndex = this.currentIndex + delta;
 
-    if (newIndex < 0) {
-      return; // 已在第一篇，不能往前
-    }
+    if (newIndex < 0) return;
 
     if (newIndex >= this.queue.length) {
-      // 已到最后一篇，询问是否重新抽取
       new Notice("已完成本轮复习！可在设置中调整后重新启动");
       return;
     }
@@ -338,20 +321,13 @@ export class ReviewView extends ItemView {
     await this.renderNote(newIndex);
   }
 
-  /**
-   * 切换显示/隐藏答案
-   */
   private toggleAnswer(): void {
     this.answerVisible = !this.answerVisible;
     this.applyAnswerState();
     this.updateUIState();
   }
 
-  /**
-   * 键盘快捷键处理
-   */
   private handleKeydown(event: KeyboardEvent): void {
-    // 如果焦点在输入框中，不处理
     const target = event.target as HTMLElement;
     if (target.tagName === "INPUT" || target.tagName === "TEXTAREA") return;
 
@@ -359,11 +335,11 @@ export class ReviewView extends ItemView {
       case "ArrowRight":
       case " ":
         event.preventDefault();
-        this.navigate(1);
+        void this.navigate(1);
         break;
       case "ArrowLeft":
         event.preventDefault();
-        this.navigate(-1);
+        void this.navigate(-1);
         break;
       case "a":
       case "A":
@@ -377,9 +353,6 @@ export class ReviewView extends ItemView {
     }
   }
 
-  /**
-   * 关闭视图
-   */
   private closeView(): void {
     this.leaf.detach();
   }
