@@ -13,6 +13,7 @@ import type RandomReviewPlugin from "./main";
 // ──────────────────────────────────────────────
 class FolderSuggest extends AbstractInputSuggest<TFolder> {
   private onChoose: (folder: TFolder) => void;
+  private input: HTMLInputElement;
 
   constructor(
     app: App,
@@ -21,11 +22,18 @@ class FolderSuggest extends AbstractInputSuggest<TFolder> {
   ) {
     super(app, inputEl);
     this.onChoose = onChoose;
+    this.input = inputEl;
 
     // 聚焦时自动弹出全部文件夹
     inputEl.addEventListener("focus", () => {
-      // 延迟触发以匹配 Obsidian 内部 ready 状态
-      setTimeout(() => this.triggerSuggest(""), 0);
+      // 短暂清空再恢复，强制触发 suggestion 刷新
+      setTimeout(() => {
+        const current = this.input.value;
+        this.input.value = "";
+        this.input.dispatchEvent(new Event("input", { bubbles: true }));
+        this.input.value = current;
+        this.input.dispatchEvent(new Event("input", { bubbles: true }));
+      }, 50);
     });
   }
 
@@ -46,7 +54,6 @@ class FolderSuggest extends AbstractInputSuggest<TFolder> {
   }
 
   renderSuggestion(folder: TFolder, el: HTMLElement): void {
-    // 根据路径层级缩进，展示层级结构
     const depth = folder.path.split("/").length - 1;
     const name = folder.path.split("/").pop() || folder.path;
     const parentPath = folder.path.includes("/")
@@ -56,18 +63,15 @@ class FolderSuggest extends AbstractInputSuggest<TFolder> {
     el.empty();
     el.style.paddingLeft = `${depth * 12 + 4}px`;
 
-    // 父路径（灰色小字）
     if (parentPath) {
       const parentSpan = el.createSpan({ text: parentPath });
       parentSpan.style.color = "var(--text-muted)";
       parentSpan.style.fontSize = "0.85em";
     }
 
-    // 当前文件夹名（加粗）
     const nameSpan = el.createSpan({ text: name });
     nameSpan.style.fontWeight = "600";
 
-    // 文件夹图标
     el.createSpan({
       text: "  📁",
       cls: "folder-suggest-icon",
@@ -75,18 +79,9 @@ class FolderSuggest extends AbstractInputSuggest<TFolder> {
   }
 
   selectSuggestion(folder: TFolder, _evt: MouseEvent | KeyboardEvent): void {
-    // 更新输入框的值
-    (this as any).inputEl.value = folder.path;
-    // 通知父组件
+    this.input.value = folder.path;
     this.onChoose(folder);
     this.close();
-  }
-
-  /** 手动触发建议列表 */
-  private triggerSuggest(query: string): void {
-    // 先清空再设置值以触发 suggestion 更新
-    const inputEl = (this as any).inputEl;
-    inputEl.dispatchEvent(new Event("input"));
   }
 }
 
