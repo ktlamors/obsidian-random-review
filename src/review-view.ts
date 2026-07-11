@@ -108,6 +108,17 @@ export class ReviewView extends ItemView {
         }
       })
     );
+
+    // 监听文件修改，编辑保存后自动刷新显示
+    this.registerEvent(
+      this.app.vault.on("modify", (file) => {
+        if (!(file instanceof TFile)) return;
+        const current = this.queue[this.currentIndex];
+        if (current && file.path === current.path) {
+          this.renderNote(this.currentIndex);
+        }
+      })
+    );
   }
 
   async onClose(): Promise<void> {
