@@ -1,7 +1,98 @@
-import { App, PluginSettingTab, Setting } from "obsidian";
+import {
+  App,
+  PluginSettingTab,
+  Setting,
+  AbstractInputSuggest,
+  TFolder,
+  TAbstractFile,
+} from "obsidian";
 import type RandomReviewPlugin from "./main";
-import type { RandomReviewSettings } from "./constants";
 
+// ──────────────────────────────────────────────
+// 文件夹自动补全建议组件
+// ──────────────────────────────────────────────
+class FolderSuggest extends AbstractInputSuggest<TFolder> {
+  private onChoose: (folder: TFolder) => void;
+
+  constructor(
+    app: App,
+    inputEl: HTMLInputElement,
+    onChoose: (folder: TFolder) => void
+  ) {
+    super(app, inputEl);
+    this.onChoose = onChoose;
+
+    // 聚焦时自动弹出全部文件夹
+    inputEl.addEventListener("focus", () => {
+      // 延迟触发以匹配 Obsidian 内部 ready 状态
+      setTimeout(() => this.triggerSuggest(""), 0);
+    });
+  }
+
+  getSuggestions(query: string): TFolder[] {
+    const folders: TFolder[] = [];
+    this.app.vault.getAllLoadedFiles().forEach((file: TAbstractFile) => {
+      if (file instanceof TFolder) {
+        folders.push(file);
+      }
+    });
+
+    if (!query) return folders;
+
+    const lower = query.toLowerCase();
+    return folders.filter((folder) =>
+      folder.path.toLowerCase().includes(lower)
+    );
+  }
+
+  renderSuggestion(folder: TFolder, el: HTMLElement): void {
+    // 根据路径层级缩进，展示层级结构
+    const depth = folder.path.split("/").length - 1;
+    const name = folder.path.split("/").pop() || folder.path;
+    const parentPath = folder.path.includes("/")
+      ? folder.path.substring(0, folder.path.lastIndexOf("/")) + " ▸ "
+      : "";
+
+    el.empty();
+    el.style.paddingLeft = `${depth * 12 + 4}px`;
+
+    // 父路径（灰色小字）
+    if (parentPath) {
+      const parentSpan = el.createSpan({ text: parentPath });
+      parentSpan.style.color = "var(--text-muted)";
+      parentSpan.style.fontSize = "0.85em";
+    }
+
+    // 当前文件夹名（加粗）
+    const nameSpan = el.createSpan({ text: name });
+    nameSpan.style.fontWeight = "600";
+
+    // 文件夹图标
+    el.createSpan({
+      text: "  📁",
+      cls: "folder-suggest-icon",
+    });
+  }
+
+  selectSuggestion(folder: TFolder, _evt: MouseEvent | KeyboardEvent): void {
+    // 更新输入框的值
+    (this as any).inputEl.value = folder.path;
+    // 通知父组件
+    this.onChoose(folder);
+    this.close();
+  }
+
+  /** 手动触发建议列表 */
+  private triggerSuggest(query: string): void {
+    // 先清空再设置值以触发 suggestion 更新
+    const inputEl = (this as any).inputEl;
+    inputEl.dispatchEvent(new Event("input"));
+  }
+}
+
+// ──────────────────────────────────────────────
+// 设置面板
+// ──────────────────────────────────────────────
 export class RandomReviewSettingTab extends PluginSettingTab {
   plugin: RandomReviewPlugin;
 
@@ -14,38 +105,84 @@ export class RandomReviewSettingTab extends PluginSettingTab {
     const { containerEl } = this;
     containerEl.empty();
 
-    // --- 笔记筛选 ---
+    // ── 笔记筛选 ──
     containerEl.createEl("h2", { text: "笔记筛选" });
 
-    new Setting(containerEl)
+    // 目标文件夹（带自动补全）
+    const folderPathSetting = new Setting(containerEl)
       .setName("目标文件夹")
-      .setDesc("从中抽取笔记的文件夹路径")
-      .addText((text) =>
-        text
-          .setPlaceholder("flashcards/")
-          .setValue(this.plugin.settings.folderPath)
-          .onChange(async (value) => {
-            this.plugin.settings.folderPath = value;
-            await this.plugin.saveSettings();
-          })
+      .setDesc("从中抽取笔记的文件夹路径，点击或输入自动列出全部目录");
+    this.addFolderSuggestInput(
+      folderPathSetting,
+      this.plugin.settings.folderPath,
+      async (folder) => {
+        this.plugin.settings.folderPath = folder.path;
+        await this.plugin.saveSettings();
+      }
+    );
+
+    // 排除文件夹
+    containerEl.createEl("h3", { text: "排除文件夹" });
+    containerEl.createEl("p", {
+      text: "以下文件夹内的笔记不会被抽取",
+      cls: "setting-item-description",
+    });
+
+    const excludeContainer = containerEl.createDiv("exclude-folders-list");
+
+    this.plugin.settings.excludeFolders.forEach((folderPath, index) => {
+      const itemDiv = excludeContainer.createDiv("exclude-folder-item");
+      itemDiv.style.display = "flex";
+      itemDiv.style.alignItems = "center";
+      itemDiv.style.gap = "8px";
+      itemDiv.style.marginBottom = "4px";
+
+      const inputWrapper = itemDiv.createDiv();
+      inputWrapper.style.flex = "1";
+
+      const textComponent = new Setting(inputWrapper).addText((text) =>
+        text.setValue(folderPath).setPlaceholder("选择要排除的文件夹…")
       );
 
-    new Setting(containerEl)
-      .setName("排除文件夹")
-      .setDesc("不会被抽取的子文件夹（每行一个）")
-      .addTextArea((text) =>
-        text
-          .setPlaceholder("archive/\ndraft/")
-          .setValue(this.plugin.settings.excludeFolders.join("\n"))
-          .onChange(async (value) => {
-            this.plugin.settings.excludeFolders = value
-              .split("\n")
-              .map((s) => s.trim())
-              .filter((s) => s.length > 0);
-            await this.plugin.saveSettings();
-          })
-      );
+      const inputEl = (textComponent as any).inputEl as HTMLInputElement;
+      new FolderSuggest(this.app, inputEl, async (f) => {
+        this.plugin.settings.excludeFolders[index] = f.path;
+        await this.plugin.saveSettings();
+      });
 
+      // 手动输入也保存
+      inputEl.addEventListener("change", async () => {
+        this.plugin.settings.excludeFolders[index] = inputEl.value.trim();
+        await this.plugin.saveSettings();
+      });
+
+      // 移除按钮
+      const removeBtn = itemDiv.createEl("button", {
+        text: "✕",
+        cls: "exclude-folder-remove-btn",
+      });
+      removeBtn.style.background = "none";
+      removeBtn.style.border = "none";
+      removeBtn.style.cursor = "pointer";
+      removeBtn.style.color = "var(--text-muted)";
+      removeBtn.style.fontSize = "1.2em";
+      removeBtn.addEventListener("click", async () => {
+        this.plugin.settings.excludeFolders.splice(index, 1);
+        await this.plugin.saveSettings();
+        this.display();
+      });
+    });
+
+    // 添加排除文件夹按钮
+    new Setting(containerEl).addButton((btn) =>
+      btn.setButtonText("+ 添加排除文件夹").onClick(async () => {
+        this.plugin.settings.excludeFolders.push("");
+        await this.plugin.saveSettings();
+        this.display();
+      })
+    );
+
+    // 包含标签
     new Setting(containerEl)
       .setName("包含标签")
       .setDesc("只抽取包含以下任一标签的笔记（每行一个，# 号可选）")
@@ -62,6 +199,7 @@ export class RandomReviewSettingTab extends PluginSettingTab {
           })
       );
 
+    // 排除标签
     new Setting(containerEl)
       .setName("排除标签")
       .setDesc("排除包含以下任一标签的笔记（每行一个）")
@@ -78,7 +216,7 @@ export class RandomReviewSettingTab extends PluginSettingTab {
           })
       );
 
-    // 属性筛选
+    // ── 属性筛选 ──
     containerEl.createEl("h3", { text: "属性筛选" });
     containerEl.createEl("p", {
       text: "多个条件同时满足（AND），格式：属性名=值，每行一个",
@@ -101,7 +239,7 @@ export class RandomReviewSettingTab extends PluginSettingTab {
       })
     );
 
-    // --- 抽取规则 ---
+    // ── 抽取规则 ──
     containerEl.createEl("h2", { text: "抽取规则" });
 
     new Setting(containerEl)
@@ -132,7 +270,7 @@ export class RandomReviewSettingTab extends PluginSettingTab {
           })
       );
 
-    // --- 显示设置 ---
+    // ── 显示设置 ──
     containerEl.createEl("h2", { text: "显示设置" });
 
     new Setting(containerEl)
@@ -160,6 +298,29 @@ export class RandomReviewSettingTab extends PluginSettingTab {
       );
   }
 
+  // ──────────────────────────────────────────
+  // 辅助方法
+  // ──────────────────────────────────────────
+
+  /**
+   * 添加带文件夹自动补全的文本输入
+   */
+  private addFolderSuggestInput(
+    setting: Setting,
+    initialPath: string,
+    onSelect: (folder: TFolder) => void
+  ): void {
+    setting.addText((text) => {
+      text.setValue(initialPath).setPlaceholder("点击选择或输入文件夹路径…");
+
+      const inputEl = (text as any).inputEl as HTMLInputElement;
+      new FolderSuggest(this.app, inputEl, onSelect);
+    });
+  }
+
+  /**
+   * 添加一条属性筛选行
+   */
   private addPropertyFilterSetting(
     containerEl: HTMLElement,
     filter: { key: string; value: string; operator: string },
