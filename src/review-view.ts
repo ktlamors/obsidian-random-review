@@ -190,14 +190,22 @@ export class ReviewView extends ItemView {
    * 应用答案折叠/展开状态到 DOM
    */
   private applyAnswerState(): void {
+    // 宽泛匹配所有 callout（含不同渲染场景下的 class 变体）
     const callouts = this.noteContentEl.querySelectorAll(
-      ".callout.is-collapsible"
+      ".callout.is-collapsible, .callout[data-callout]"
     );
     callouts.forEach((el) => {
+      if (!(el instanceof HTMLElement)) return;
+      const content = el.querySelector(".callout-content") as HTMLElement | null;
+
       if (this.answerVisible) {
         el.classList.remove("is-collapsed");
+        // 兜底：直接恢复内容显示
+        if (content) content.style.display = "";
       } else {
         el.classList.add("is-collapsed");
+        // 兜底：直接隐藏内容
+        if (content) content.style.display = "none";
       }
     });
   }
