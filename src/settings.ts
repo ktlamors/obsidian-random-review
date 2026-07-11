@@ -8,32 +8,57 @@ import {
 import type RandomReviewPlugin from "./main";
 
 /**
- * 获取 vault 中所有文件夹，按路径排序
+ * 获取指定父文件夹下的子文件夹列表
+ * @param parentPath 父文件夹路径，空字符串表示全部文件夹
+ * @param includeSelf 是否将父文件夹自身也列入选项
  */
-function getAllFolders(app: App): TFolder[] {
+function getSubFolders(app: App, parentPath: string, includeSelf: boolean): TFolder[] {
   const folders: TFolder[] = [];
   app.vault.getAllLoadedFiles().forEach((file: TAbstractFile) => {
-    if (file instanceof TFolder) {
+    if (!(file instanceof TFolder)) return;
+    if (file.path === "/") return;
+
+    if (!parentPath) {
       folders.push(file);
+    } else {
+      // 只包含目标文件夹本身及其子文件夹
+      const normalized = parentPath.replace(/\/+$/, "");
+      if (file.path === normalized || file.path.startsWith(normalized + "/")) {
+        folders.push(file);
+      }
     }
   });
   return folders.sort((a, b) => a.path.localeCompare(b.path));
 }
 
 /**
- * 创建文件夹下拉选择框
- * 用缩进展示层级结构
+ * 计算文件夹相对于父路径的层级深度
+ */
+function folderDepth(folderPath: string, basePath: string): number {
+  if (!basePath) {
+    return folderPath.split("/").length - 1;
+  }
+  const normalized = basePath.replace(/\/+$/, "");
+  const relative = folderPath.replace(normalized, "").replace(/^\//, "");
+  if (!relative) return 0; // 就是目标文件夹本身
+  return relative.split("/").length - 1;
+}
+
+/**
+ * 创建文件夹下拉选择框，用缩进展示层级结构。
+ * @param parentPath 限定显示的根目录，空字符串 = 全部文件夹
  */
 function createFolderSelect(
   app: App,
   containerEl: HTMLElement,
   selectedPath: string,
+  parentPath: string,
   onChange: (path: string) => void
 ): HTMLSelectElement {
   const select = containerEl.createEl("select");
   select.style.width = "100%";
 
-  const folders = getAllFolders(app);
+  const folders = getSubFolders(app, parentPath, parentPath !== "");
 
   // 空选项
   const emptyOpt = select.createEl("option");
@@ -42,13 +67,10 @@ function createFolderSelect(
 
   // 按层级渲染
   folders.forEach((folder) => {
-    if (folder.path === "/") return; // 跳过根目录
-
     const opt = select.createEl("option");
     opt.value = folder.path;
 
-    // 用缩进箭头表示层级
-    const depth = folder.path.split("/").length - 1;
+    const depth = folderDepth(folder.path, parentPath);
     const name = folder.path.split("/").pop() || folder.path;
     const indent = depth > 0 ? "└ ".repeat(depth) : "";
     opt.text = indent + name;
@@ -88,12 +110,11 @@ export class RandomReviewSettingTab extends PluginSettingTab {
       .setName("目标文件夹")
       .setDesc("从中抽取笔记的文件夹")
       .addDropdown((dropdown) => {
-        const folders = getAllFolders(this.app);
+        const folders = getSubFolders(this.app, "", false);
 
         dropdown.addOption("", "— 请选择 —");
         folders.forEach((folder) => {
-          if (folder.path === "/") return;
-          const depth = folder.path.split("/").length - 1;
+          const depth = folderDepth(folder.path, "");
           const name = folder.path.split("/").pop() || folder.path;
           const indent = depth > 0 ? "└ ".repeat(depth) : "";
           dropdown.addOption(folder.path, indent + name);
@@ -102,33 +123,60 @@ export class RandomReviewSettingTab extends PluginSettingTab {
         dropdown.setValue(this.plugin.settings.folderPath);
         dropdown.onChange(async (value) => {
           this.plugin.settings.folderPath = value;
+          // 清理不再属于新目标文件夹的排除路径
+          if (value) {
+            const normalized = value.replace(/\/+$/, "");
+            this.plugin.settings.excludeFolders =
+              this.plugin.settings.excludeFolders.filter(
+                (p) => p === normalized || p.startsWith(normalized + "/")
+              );
+          } else {
+            this.plugin.settings.excludeFolders = [];
+          }
           await this.plugin.saveSettings();
+          // 刷新以更新排除文件夹的候选列表
+          this.display();
         });
       });
 
     // 排除文件夹
     containerEl.createEl("h3", { text: "排除文件夹" });
-    containerEl.createEl("p", {
-      text: "以下文件夹内的笔记不会被抽取",
-      cls: "setting-item-description",
-    });
 
-    const excludeContainer = containerEl.createDiv("exclude-folders-list");
-
-    this.plugin.settings.excludeFolders.forEach((folderPath, index) => {
-      const row = excludeContainer.createDiv("exclude-folder-row");
-      row.style.display = "flex";
-      row.style.alignItems = "center";
-      row.style.gap = "8px";
-      row.style.marginBottom = "6px";
-
-      const selectWrapper = row.createDiv();
-      selectWrapper.style.flex = "1";
-
-      createFolderSelect(this.app, selectWrapper, folderPath, async (val) => {
-        this.plugin.settings.excludeFolders[index] = val;
-        await this.plugin.saveSettings();
+    if (!this.plugin.settings.folderPath) {
+      containerEl.createEl("p", {
+        text: "请先选择目标文件夹，再设置要排除的子文件夹",
+        cls: "setting-item-description",
       });
+      const hint = containerEl.createEl("p");
+      hint.style.color = "var(--text-muted)";
+      hint.style.fontStyle = "italic";
+      hint.setText("先在上方选择目标文件夹后，这里将自动显示其子目录");
+    } else {
+      containerEl.createEl("p", {
+        text: "以下文件夹内的笔记不会被抽取",
+        cls: "setting-item-description",
+      });
+
+      const excludeContainer = containerEl.createDiv("exclude-folders-list");
+
+      this.plugin.settings.excludeFolders.forEach((folderPath, index) => {
+        const row = excludeContainer.createDiv("exclude-folder-row");
+        row.style.display = "flex";
+        row.style.alignItems = "center";
+        row.style.gap = "8px";
+        row.style.marginBottom = "6px";
+
+        const selectWrapper = row.createDiv();
+        selectWrapper.style.flex = "1";
+
+        createFolderSelect(
+          this.app, selectWrapper, folderPath,
+          this.plugin.settings.folderPath,
+          async (val) => {
+            this.plugin.settings.excludeFolders[index] = val;
+            await this.plugin.saveSettings();
+          }
+        );
 
       // 移除按钮
       const removeBtn = row.createEl("button");
@@ -151,6 +199,7 @@ export class RandomReviewSettingTab extends PluginSettingTab {
         this.display();
       })
     );
+    } // end else (有目标文件夹时)
 
     // 包含标签
     new Setting(containerEl)
