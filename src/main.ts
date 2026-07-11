@@ -2,7 +2,6 @@ import {
   Plugin,
   WorkspaceLeaf,
   Notice,
-  TFile,
   TFolder,
 } from "obsidian";
 import {
@@ -40,7 +39,6 @@ export default class RandomReviewPlugin extends Plugin {
       void this.startReview();
     });
 
-    // 注册文件夹右键菜单
     this.registerEvent(
       this.app.workspace.on("file-menu", (menu, file) => {
         if (file instanceof TFolder) {
@@ -66,22 +64,22 @@ export default class RandomReviewPlugin extends Plugin {
   }
 
   async loadSettings(): Promise<void> {
-    const data = await this.loadData();
-    this.settings = Object.assign({}, DEFAULT_SETTINGS, data);
+    const data = (await this.loadData()) as Partial<RandomReviewSettings> | null;
+    this.settings = Object.assign({}, DEFAULT_SETTINGS, data ?? {});
 
     if (!this.settings.profiles) {
       this.settings.profiles = {};
     }
 
-    const fixCount = (filters: { count?: number }[]) => {
-      filters.forEach((f) => {
+    const fixCount = (filters: { count?: number }[]): void => {
+      for (const f of filters) {
         if (f.count === undefined) f.count = 0;
-      });
+      }
     };
     fixCount(this.settings.propertyFilters);
-    Object.values(this.settings.profiles).forEach((p) => {
-      if (p.propertyFilters) fixCount(p.propertyFilters);
-    });
+    for (const profile of Object.values(this.settings.profiles)) {
+      if (profile.propertyFilters) fixCount(profile.propertyFilters);
+    }
 
     await this.saveSettings();
   }
@@ -113,8 +111,6 @@ export default class RandomReviewPlugin extends Plugin {
       type: VIEW_TYPE_RANDOM_REVIEW,
       active: true,
     });
-
-    workspace.revealLeaf(leaf);
 
     const view = leaf.view as ReviewView;
     await view.startReview(

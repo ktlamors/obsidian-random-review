@@ -128,22 +128,26 @@ export class RandomReviewSettingTab extends PluginSettingTab {
           tag.addClass("profile-tag-active");
         }
 
-        tag.addEventListener("click", async () => {
-          this.saveCurrentToProfile();
-          this.plugin.settings.folderPath = path;
-          this.loadProfile(path);
-          await this.plugin.saveSettings();
-          this.display();
+        tag.addEventListener("click", () => {
+          void (async () => {
+            this.saveCurrentToProfile();
+            this.plugin.settings.folderPath = path;
+            this.loadProfile(path);
+            await this.plugin.saveSettings();
+            this.display();
+          })();
         });
 
-        tag.addEventListener("contextmenu", async (e) => {
+        tag.addEventListener("contextmenu", (e) => {
           e.preventDefault();
-          delete this.plugin.settings.profiles[path];
-          if (this.plugin.settings.folderPath === path) {
-            this.plugin.settings.folderPath = "";
-          }
-          await this.plugin.saveSettings();
-          this.display();
+          void (async () => {
+            delete this.plugin.settings.profiles[path];
+            if (this.plugin.settings.folderPath === path) {
+              this.plugin.settings.folderPath = "";
+            }
+            await this.plugin.saveSettings();
+            this.display();
+          })();
         });
       });
 
@@ -170,18 +174,17 @@ export class RandomReviewSettingTab extends PluginSettingTab {
         createFolderSelect(
           this.app, sw, folderPath,
           this.plugin.settings.folderPath, false,
-          async (val) => {
+          (val) => {
             this.plugin.settings.excludeFolders[index] = val;
-            await this.plugin.saveSettings();
+            void this.plugin.saveSettings();
           }
         );
         const rb = row.createEl("button", { cls: "exclude-folder-remove" });
         rb.setText("✕");
         rb.setAttr("aria-label", "移除");
-        rb.addEventListener("click", async () => {
+        rb.addEventListener("click", () => {
           this.plugin.settings.excludeFolders.splice(index, 1);
-          await this.plugin.saveSettings();
-          this.display();
+          void this.plugin.saveSettings().then(() => this.display());
         });
       });
       new Setting(containerEl).addButton((btn) =>
