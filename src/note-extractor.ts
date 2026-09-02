@@ -49,14 +49,13 @@ export function extractNotes(
       }
 
       // 从 frontmatter tags 获取
-      const frontmatterTags = cache.frontmatter?.tags;
-      if (frontmatterTags) {
-        if (Array.isArray(frontmatterTags)) {
-          frontmatterTags.forEach((t: string) =>
-            fileTags.push(String(t).replace(/^#/, ""))
-          );
-        } else if (typeof frontmatterTags === "string") {
-          fileTags.push(frontmatterTags.replace(/^#/, ""));
+      const frontmatter = cache.frontmatter as Record<string, unknown> | null | undefined;
+      if (frontmatter) {
+        const tags = frontmatter.tags;
+        if (Array.isArray(tags)) {
+          tags.forEach((t) => fileTags.push(String(t).replace(/^#/, "")));
+        } else if (typeof tags === "string") {
+          fileTags.push(tags.replace(/^#/, ""));
         }
       }
 
@@ -99,7 +98,8 @@ export function extractNotes(
           const cache = app.metadataCache.getFileCache(file);
           if (!cache?.frontmatter) return false;
 
-          const actualValue = cache.frontmatter[filter.key];
+          const frontmatter = cache.frontmatter as Record<string, unknown>;
+          const actualValue = frontmatter[filter.key];
           if (actualValue === undefined || actualValue === null) return false;
 
           const actualStr = String(actualValue);

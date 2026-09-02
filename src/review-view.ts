@@ -301,7 +301,7 @@ export class ReviewView extends ItemView {
     // .callout.is-collapsed 规则冲突而失效（cf67613 已验证此方案可靠）。
     const contents = this.noteContentEl.querySelectorAll(".callout-content");
     contents.forEach((el) => {
-      if (el instanceof HTMLElement) {
+      if (el.instanceOf(HTMLElement)) {
         el.style.display = this.answerVisible ? "" : "none";
       }
     });

@@ -8,8 +8,8 @@
 }
 
 /* Utility */
-.random-review-hidden {
-  display: none !important;
+.random-review-container .random-review-hidden {
+  display: none;
 }
 
 /* 顶部栏 */

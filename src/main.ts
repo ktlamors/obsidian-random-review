@@ -7,7 +7,6 @@ import {
 } from "obsidian";
 import {
   VIEW_TYPE_RANDOM_REVIEW,
-  PLUGIN_NAME,
   RandomReviewSettings,
   FolderProfile,
   DEFAULT_SETTINGS,
@@ -16,6 +15,12 @@ import { RandomReviewSettingTab } from "./settings";
 import { extractNotes } from "./note-extractor";
 import { ReviewView } from "./review-view";
 import { getLang } from "./i18n";
+
+/** Obsidian 内部设置管理器的最小接口（未在公开类型中暴露） */
+interface SettingManager {
+  open(): Promise<void>;
+  openTabById(id: string): Promise<void>;
+}
 
 export default class RandomReviewPlugin extends Plugin {
   settings!: RandomReviewSettings;
@@ -35,8 +40,6 @@ export default class RandomReviewPlugin extends Plugin {
     this.registerStartCommand();
     this.registerRibbonIcon();
     this.registerFolderMenu();
-
-    console.log(`${PLUGIN_NAME} plugin loaded`);
   }
 
   private registerStartCommand(): void {
@@ -60,7 +63,7 @@ export default class RandomReviewPlugin extends Plugin {
 
     this.ribbonIcon.addEventListener("contextmenu", (e) => {
       e.preventDefault();
-      const setting = (this.app as any).setting;
+      const setting = (this.app as unknown as { setting: SettingManager }).setting;
       void setting.open();
       void setting.openTabById(this.manifest.id);
     });
@@ -96,9 +99,7 @@ export default class RandomReviewPlugin extends Plugin {
     );
   }
 
-  onunload(): void {
-    console.log(`${PLUGIN_NAME} plugin unloaded`);
-  }
+  onunload(): void {}
 
   async loadSettings(): Promise<void> {
     const data = (await this.loadData()) as Partial<RandomReviewSettings> | null;
