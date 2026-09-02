@@ -164,6 +164,50 @@
 }
 
 /* 设置面板 */
+.random-review-tabs {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 16px;
+  border-bottom: 1px solid var(--background-modifier-border);
+}
+
+.random-review-tab {
+  padding: 8px 16px;
+  border: none;
+  border-bottom: 2px solid transparent;
+  background: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 0.95em;
+}
+
+.random-review-tab:hover {
+  color: var(--text-normal);
+}
+
+.random-review-tab-active {
+  color: var(--text-normal);
+  border-bottom-color: var(--interactive-accent);
+  font-weight: 600;
+}
+
+.random-review-tab-content {
+  padding-bottom: 20px;
+}
+
+.random-review-intro {
+  line-height: 1.7;
+  color: var(--text-normal);
+  margin-bottom: 12px;
+}
+
+.random-review-usage {
+  line-height: 1.7;
+  color: var(--text-normal);
+  padding-left: 1.4em;
+  margin-top: 4px;
+}
+
 .profile-tag-list {
   display: flex;
   flex-wrap: wrap;

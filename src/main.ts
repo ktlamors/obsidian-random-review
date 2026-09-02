@@ -14,9 +14,11 @@ import {
 import { RandomReviewSettingTab } from "./settings";
 import { extractNotes } from "./note-extractor";
 import { ReviewView } from "./review-view";
+import { getLang } from "./i18n";
 
 export default class RandomReviewPlugin extends Plugin {
   settings!: RandomReviewSettings;
+  private ribbonIcon!: HTMLElement;
 
   async onload(): Promise<void> {
     await this.loadSettings();
@@ -28,31 +30,47 @@ export default class RandomReviewPlugin extends Plugin {
       (leaf: WorkspaceLeaf) => new ReviewView(leaf)
     );
 
+    this.registerStartCommand();
+    this.registerRibbonIcon();
+    this.registerFolderMenu();
+
+    console.log(`${PLUGIN_NAME} plugin loaded`);
+  }
+
+  private registerStartCommand(): void {
     this.addCommand({
       id: "start-review",
-      name: "启动随机复习",
+      name: getLang(this.settings.language).startReview,
       callback: () => {
         void this.startReview();
       },
     });
+  }
 
-    const ribbonIcon = this.addRibbonIcon("dice", "随机复习", () => {
-      void this.startReview();
-    });
+  private registerRibbonIcon(): void {
+    this.ribbonIcon = this.addRibbonIcon(
+      "dice",
+      getLang(this.settings.language).ribbonTooltip,
+      () => {
+        void this.startReview();
+      }
+    );
 
-    ribbonIcon.addEventListener("contextmenu", (e) => {
+    this.ribbonIcon.addEventListener("contextmenu", (e) => {
       e.preventDefault();
       const setting = (this.app as any).setting;
       void setting.open();
       void setting.openTabById(this.manifest.id);
     });
+  }
 
+  private registerFolderMenu(): void {
     this.registerEvent(
       this.app.workspace.on("file-menu", (menu, file) => {
         if (file instanceof TFolder) {
           menu.addItem((item) => {
             item
-              .setTitle("从此文件夹随机抽取")
+              .setTitle(getLang(this.settings.language).folderMenu)
               .setIcon("dice")
               .onClick(() => {
                 this.settings.folderPath = file.path;
@@ -63,8 +81,18 @@ export default class RandomReviewPlugin extends Plugin {
         }
       })
     );
+  }
 
-    console.log(`${PLUGIN_NAME} plugin loaded`);
+  /** 语言切换后刷新命令名与 Ribbon 提示 */
+  refreshUIStrings(): void {
+    if (typeof this.removeCommand === "function") {
+      this.removeCommand("start-review");
+    }
+    this.registerStartCommand();
+    this.ribbonIcon?.setAttribute(
+      "aria-label",
+      getLang(this.settings.language).ribbonTooltip
+    );
   }
 
   onunload(): void {
@@ -124,7 +152,8 @@ export default class RandomReviewPlugin extends Plugin {
     await view.startReview(
       queue,
       this.settings.answerDefaultCollapsed,
-      this.settings.showNavigationBar
+      this.settings.showNavigationBar,
+      this.settings.language
     );
   }
 }

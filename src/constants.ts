@@ -23,6 +23,9 @@ export interface RandomReviewSettings {
   // 当前选中的文件夹
   folderPath: string;
 
+  // 界面语言
+  language: "zh" | "en";
+
   // 当前工作配置
   excludeFolders: string[];
   includeTags: string[];
@@ -51,6 +54,7 @@ export const DEFAULT_PROFILE: FolderProfile = {
 
 export const DEFAULT_SETTINGS: RandomReviewSettings = {
   folderPath: "",
+  language: "zh",
   excludeFolders: [],
   includeTags: [],
   excludeTags: [],

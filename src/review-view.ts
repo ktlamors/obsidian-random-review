@@ -7,6 +7,7 @@ import {
   MarkdownView,
 } from "obsidian";
 import { VIEW_TYPE_RANDOM_REVIEW } from "./constants";
+import { getLang, Language } from "./i18n";
 
 export class ReviewView extends ItemView {
   private queue: TFile[] = [];
@@ -27,6 +28,7 @@ export class ReviewView extends ItemView {
 
   private answerDefaultCollapsed: boolean = true;
   private showNavBar: boolean = true;
+  private language: Language = "zh";
   private isEditing: boolean = false;
   private editingFile: TFile | null = null;
 
@@ -73,6 +75,8 @@ export class ReviewView extends ItemView {
 
     // 内容区
     this.noteContentEl = container.createDiv("random-review-content");
+    // 让内容区可接收焦点，使键盘事件能冒泡到容器上的 keydown 监听
+    this.noteContentEl.setAttr("tabindex", "-1");
 
     // 底部导航栏
     this.navBarEl = container.createDiv("random-review-navbar");
@@ -117,7 +121,7 @@ export class ReviewView extends ItemView {
         if (!stillOpen) {
           this.isEditing = false;
           this.editingFile = null;
-          this.editBtn.setText("编辑原笔记");
+          this.editBtn.setText(getLang(this.language).editNote);
         }
       })
     );
@@ -150,7 +154,7 @@ export class ReviewView extends ItemView {
       await leaf.openFile(file);
       this.editingFile = file;
       this.isEditing = true;
-      this.editBtn.setText("关闭原笔记");
+      this.editBtn.setText(getLang(this.language).closeNote);
     }
   }
 
@@ -165,20 +169,23 @@ export class ReviewView extends ItemView {
     }
     this.isEditing = false;
     this.editingFile = null;
-    this.editBtn.setText("编辑原笔记");
+    this.editBtn.setText(getLang(this.language).editNote);
   }
 
   async startReview(
     queue: TFile[],
     answerDefaultCollapsed: boolean,
-    showNavBar: boolean
+    showNavBar: boolean,
+    language: Language
   ): Promise<void> {
     this.queue = queue;
     this.currentIndex = 0;
     this.answerDefaultCollapsed = answerDefaultCollapsed;
     this.showNavBar = showNavBar;
+    this.language = language;
 
     this.answerVisible = !answerDefaultCollapsed;
+    this.updateUIText();
 
     if (showNavBar) {
       this.navBarEl.removeClass("random-review-hidden");
@@ -195,17 +202,29 @@ export class ReviewView extends ItemView {
   }
 
   private renderEmptyState(): void {
+    const t = getLang(this.language);
     this.topBarEl.addClass("random-review-hidden");
     this.noteContentEl.empty();
     this.noteContentEl.createDiv("random-review-empty");
     const emptyDiv = this.noteContentEl.querySelector(".random-review-empty");
     if (emptyDiv) {
-      emptyDiv.createEl("p", { text: "没有符合条件的笔记 😕" });
-      emptyDiv.createEl("p", { text: "请在设置中调整筛选条件后重新启动" });
+      emptyDiv.createEl("p", { text: t.emptyTitle });
+      emptyDiv.createEl("p", { text: t.emptyDesc });
     }
     this.prevBtn.disabled = true;
     this.nextBtn.disabled = true;
     this.toggleAnswerBtn.addClass("random-review-hidden");
+
+    // 空状态下也要可响应 Esc 关闭
+    this.noteContentEl.focus();
+  }
+
+  private updateUIText(): void {
+    const t = getLang(this.language);
+    this.editBtn.setText(this.isEditing ? t.closeNote : t.editNote);
+    this.prevBtn.setText(t.previous);
+    this.nextBtn.setText(t.next);
+    this.toggleAnswerBtn.setText(t.showAnswer);
   }
 
   private async renderNote(index: number): Promise<void> {
@@ -216,7 +235,7 @@ export class ReviewView extends ItemView {
 
     const exists = await this.app.vault.adapter.exists(file.path);
     if (!exists) {
-      new Notice(`笔记 "${file.basename}" 已被删除，自动跳过`);
+      new Notice(getLang(this.language).deletedSkip(file.basename));
       this.queue.splice(index, 1);
       if (this.queue.length === 0) {
         this.renderEmptyState();
@@ -258,12 +277,18 @@ export class ReviewView extends ItemView {
       }
 
       this.updateUIState();
+
+      // 渲染完成后把焦点放回内容区（编辑分屏打开时不抢焦点），
+      // 保证键盘快捷键持续生效
+      if (!this.isEditing) {
+        this.noteContentEl.focus();
+      }
     } catch (err) {
       this.noteContentEl.empty();
       this.noteContentEl.createDiv("random-review-error");
       const errDiv = this.noteContentEl.querySelector(".random-review-error");
       if (errDiv) {
-        errDiv.createEl("p", { text: `无法读取笔记: ${file.basename}` });
+        errDiv.createEl("p", { text: getLang(this.language).readFailed(file.basename) });
         errDiv.createEl("p", { text: String(err) });
       }
       this.updateUIState();
@@ -299,7 +324,9 @@ export class ReviewView extends ItemView {
       `${this.currentIndex + 1} / ${this.queue.length}`
     );
     this.toggleAnswerBtn.setText(
-      this.answerVisible ? "隐藏答案" : "显示答案"
+      this.answerVisible
+        ? getLang(this.language).hideAnswer
+        : getLang(this.language).showAnswer
     );
 
     const singleNote = this.queue.length <= 1;
@@ -316,7 +343,7 @@ export class ReviewView extends ItemView {
     if (newIndex < 0) return;
 
     if (newIndex >= this.queue.length) {
-      new Notice("已完成本轮复习！可在设置中调整后重新启动");
+      new Notice(getLang(this.language).completed);
       return;
     }
 

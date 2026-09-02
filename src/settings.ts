@@ -7,6 +7,7 @@ import {
 } from "obsidian";
 import type RandomReviewPlugin from "./main";
 import { DEFAULT_PROFILE } from "./constants";
+import { getLang, Language } from "./i18n";
 
 // ──────────────────────────────────────────────
 // 工具函数
@@ -71,6 +72,7 @@ function createFolderSelect(
 // ──────────────────────────────────────────────
 export class RandomReviewSettingTab extends PluginSettingTab {
   plugin: RandomReviewPlugin;
+  private activeTab: "general" | "extraction" = "extraction";
 
   constructor(app: App, plugin: RandomReviewPlugin) {
     super(app, plugin);
@@ -81,16 +83,76 @@ export class RandomReviewSettingTab extends PluginSettingTab {
     const { containerEl } = this;
     containerEl.empty();
 
+    const t = getLang(this.plugin.settings.language);
+
+    // ── 选项卡栏 ──
+    const tabBar = containerEl.createDiv("random-review-tabs");
+    const makeTab = (key: "general" | "extraction", label: string): void => {
+      const btn = tabBar.createEl("button", {
+        text: label,
+        cls: "random-review-tab",
+      });
+      if (this.activeTab === key) btn.addClass("random-review-tab-active");
+      btn.addEventListener("click", () => {
+        this.activeTab = key;
+        this.display();
+      });
+    };
+    makeTab("general", t.tabGeneral);
+    makeTab("extraction", t.tabExtraction);
+
+    const contentEl = containerEl.createDiv("random-review-tab-content");
+
+    if (this.activeTab === "general") {
+      this.displayGeneral(contentEl, t);
+    } else {
+      this.displayExtraction(contentEl, t);
+    }
+  }
+
+  // ──────────────────────────────────────────
+  // 通用选项卡
+  // ──────────────────────────────────────────
+  private displayGeneral(containerEl: HTMLElement, t: ReturnType<typeof getLang>): void {
+    new Setting(containerEl)
+      .setName(t.languageSetting)
+      .setDesc(t.languageDesc)
+      .addDropdown((dropdown) => {
+        dropdown.addOption("zh", "简体中文");
+        dropdown.addOption("en", "English");
+        dropdown.setValue(this.plugin.settings.language);
+        dropdown.onChange(async (value) => {
+          this.plugin.settings.language = value as Language;
+          await this.plugin.saveSettings();
+          this.plugin.refreshUIStrings();
+          this.display();
+        });
+      });
+
+    new Setting(containerEl).setName(t.pluginIntroTitle).setHeading();
+    containerEl.createEl("p", { text: t.pluginIntro, cls: "random-review-intro" });
+
+    new Setting(containerEl).setName(t.usageTitle).setHeading();
+    const usageList = containerEl.createEl("ul", { cls: "random-review-usage" });
+    t.usageItems.forEach((item) => {
+      usageList.createEl("li", { text: item });
+    });
+  }
+
+  // ──────────────────────────────────────────
+  // 抽取控制选项卡（原有设置内容）
+  // ──────────────────────────────────────────
+  private displayExtraction(containerEl: HTMLElement, t: ReturnType<typeof getLang>): void {
     // ── 笔记筛选 ──
-    new Setting(containerEl).setName("笔记筛选").setHeading();
+    new Setting(containerEl).setName(t.noteFilterHeading).setHeading();
 
     // 目标文件夹
     new Setting(containerEl)
-      .setName("目标文件夹")
-      .setDesc("从中抽取笔记的文件夹，切换时自动保存当前配置")
+      .setName(t.targetFolder)
+      .setDesc(t.targetFolderDesc)
       .addDropdown((dropdown) => {
         const folders = getSubFolders(this.app, "", false);
-        dropdown.addOption("", "— 请选择 —");
+        dropdown.addOption("", t.selectFolder);
         folders.forEach((folder) => {
           const depth = folderDepth(folder.path, "");
           const name = folder.path.split("/").pop() || folder.path;
@@ -110,9 +172,9 @@ export class RandomReviewSettingTab extends PluginSettingTab {
     // 配置档案
     const profileKeys = Object.keys(this.plugin.settings.profiles);
     if (profileKeys.length > 0) {
-      new Setting(containerEl).setName("历史配置档案").setHeading();
+      new Setting(containerEl).setName(t.profileHeading).setHeading();
       containerEl.createEl("p", {
-        text: "点击切换配置，右键删除",
+        text: t.profileDesc,
         cls: "setting-item-description",
       });
 
@@ -152,19 +214,19 @@ export class RandomReviewSettingTab extends PluginSettingTab {
       });
 
       const hint = containerEl.createEl("p", { cls: "profile-hint" });
-      hint.setText("右键点击档案标签可删除");
+      hint.setText(t.profileHint);
     }
 
     // 排除文件夹
-    new Setting(containerEl).setName("排除文件夹").setHeading();
+    new Setting(containerEl).setName(t.excludeFoldersHeading).setHeading();
     if (!this.plugin.settings.folderPath) {
       containerEl.createEl("p", {
-        text: "请先选择目标文件夹",
+        text: t.needTargetFirst,
         cls: "setting-item-description",
       });
     } else {
       containerEl.createEl("p", {
-        text: "以下文件夹内的笔记不会被抽取",
+        text: t.excludeFoldersDesc,
         cls: "setting-item-description",
       });
       const excludeContainer = containerEl.createDiv("exclude-folders-list");
@@ -181,14 +243,14 @@ export class RandomReviewSettingTab extends PluginSettingTab {
         );
         const rb = row.createEl("button", { cls: "exclude-folder-remove" });
         rb.setText("✕");
-        rb.setAttr("aria-label", "移除");
+        rb.setAttr("aria-label", t.remove);
         rb.addEventListener("click", () => {
           this.plugin.settings.excludeFolders.splice(index, 1);
           void this.plugin.saveSettings().then(() => this.display());
         });
       });
       new Setting(containerEl).addButton((btn) =>
-        btn.setButtonText("+ 添加排除文件夹").onClick(async () => {
+        btn.setButtonText(t.addExcludeFolder).onClick(async () => {
           this.plugin.settings.excludeFolders.push("");
           await this.plugin.saveSettings();
           this.display();
@@ -198,8 +260,8 @@ export class RandomReviewSettingTab extends PluginSettingTab {
 
     // 包含标签
     new Setting(containerEl)
-      .setName("包含标签")
-      .setDesc("只抽取包含以下任一标签的笔记（每行一个，# 号可选）")
+      .setName(t.includeTags)
+      .setDesc(t.includeTagsDesc)
       .addTextArea((text) =>
         text
           .setPlaceholder("math\nhistory")
@@ -215,8 +277,8 @@ export class RandomReviewSettingTab extends PluginSettingTab {
 
     // 排除标签
     new Setting(containerEl)
-      .setName("排除标签")
-      .setDesc("排除包含以下任一标签的笔记（每行一个）")
+      .setName(t.excludeTags)
+      .setDesc(t.excludeTagsDesc)
       .addTextArea((text) =>
         text
           .setPlaceholder("draft\nprivate")
@@ -231,16 +293,16 @@ export class RandomReviewSettingTab extends PluginSettingTab {
       );
 
     // ── 属性筛选 ──
-    new Setting(containerEl).setName("属性筛选").setHeading();
+    new Setting(containerEl).setName(t.propertyFilterHeading).setHeading();
     containerEl.createEl("p", {
-      text: "按属性分别抽取，各条件独立匹配（OR），合并后随机排列",
+      text: t.propertyFilterDesc,
       cls: "setting-item-description",
     });
     this.plugin.settings.propertyFilters.forEach((filter, index) => {
-      this.addPropertyFilterSetting(containerEl, filter, index);
+      this.addPropertyFilterSetting(containerEl, filter, index, t);
     });
     new Setting(containerEl).addButton((btn) =>
-      btn.setButtonText("+ 添加属性筛选").onClick(async () => {
+      btn.setButtonText(t.addPropertyFilter).onClick(async () => {
         this.plugin.settings.propertyFilters.push({
           key: "", value: "", operator: "equals", count: 0,
         });
@@ -250,10 +312,10 @@ export class RandomReviewSettingTab extends PluginSettingTab {
     );
 
     // ── 抽取规则 ──
-    new Setting(containerEl).setName("抽取规则").setHeading();
+    new Setting(containerEl).setName(t.extractionRuleHeading).setHeading();
     new Setting(containerEl)
-      .setName("抽取数量")
-      .setDesc("未设置属性筛选时的默认抽取数量")
+      .setName(t.pickCount)
+      .setDesc(t.pickCountDesc)
       .addText((text) =>
         text
           .setPlaceholder("10")
@@ -267,7 +329,7 @@ export class RandomReviewSettingTab extends PluginSettingTab {
           })
       );
     new Setting(containerEl)
-      .setName("随机排列")
+      .setName(t.randomOrder)
       .addToggle((toggle) =>
         toggle.setValue(this.plugin.settings.randomOrder).onChange(async (v) => {
           this.plugin.settings.randomOrder = v;
@@ -276,9 +338,9 @@ export class RandomReviewSettingTab extends PluginSettingTab {
       );
 
     // ── 显示设置 ──
-    new Setting(containerEl).setName("显示设置").setHeading();
+    new Setting(containerEl).setName(t.displayHeading).setHeading();
     new Setting(containerEl)
-      .setName("答案默认折叠")
+      .setName(t.answerDefaultCollapsed)
       .addToggle((toggle) =>
         toggle
           .setValue(this.plugin.settings.answerDefaultCollapsed)
@@ -288,7 +350,7 @@ export class RandomReviewSettingTab extends PluginSettingTab {
           })
       );
     new Setting(containerEl)
-      .setName("显示导航栏")
+      .setName(t.showNavigationBar)
       .addToggle((toggle) =>
         toggle.setValue(this.plugin.settings.showNavigationBar).onChange(async (v) => {
           this.plugin.settings.showNavigationBar = v;
@@ -339,23 +401,24 @@ export class RandomReviewSettingTab extends PluginSettingTab {
   private addPropertyFilterSetting(
     containerEl: HTMLElement,
     filter: { key: string; value: string; operator: string; count: number },
-    index: number
+    index: number,
+    t: ReturnType<typeof getLang>
   ): void {
     const setting = new Setting(containerEl);
     setting.addText((text) =>
-      text.setPlaceholder("属性名").setValue(filter.key).onChange(async (v) => {
+      text.setPlaceholder(t.propertyKey).setValue(filter.key).onChange(async (v) => {
         this.plugin.settings.propertyFilters[index].key = v;
         await this.plugin.saveSettings();
       })
     );
     setting.addText((text) =>
-      text.setPlaceholder("属性值").setValue(filter.value).onChange(async (v) => {
+      text.setPlaceholder(t.propertyValue).setValue(filter.value).onChange(async (v) => {
         this.plugin.settings.propertyFilters[index].value = v;
         await this.plugin.saveSettings();
       })
     );
     setting.addText((text) => {
-      text.setPlaceholder("数量").setValue(String(filter.count || "")).onChange(async (v) => {
+      text.setPlaceholder(t.propertyCount).setValue(String(filter.count || "")).onChange(async (v) => {
         const n = parseInt(v);
         this.plugin.settings.propertyFilters[index].count = isNaN(n) ? 0 : Math.max(0, n);
         await this.plugin.saveSettings();
@@ -363,7 +426,7 @@ export class RandomReviewSettingTab extends PluginSettingTab {
       text.inputEl.addClass("property-count-input");
     });
     setting.addExtraButton((btn) =>
-      btn.setIcon("cross").setTooltip("移除").onClick(async () => {
+      btn.setIcon("cross").setTooltip(t.remove).onClick(async () => {
         this.plugin.settings.propertyFilters.splice(index, 1);
         await this.plugin.saveSettings();
         this.display();
