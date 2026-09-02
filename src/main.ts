@@ -3,6 +3,7 @@ import {
   WorkspaceLeaf,
   Notice,
   TFolder,
+  Command,
 } from "obsidian";
 import {
   VIEW_TYPE_RANDOM_REVIEW,
@@ -19,6 +20,7 @@ import { getLang } from "./i18n";
 export default class RandomReviewPlugin extends Plugin {
   settings!: RandomReviewSettings;
   private ribbonIcon!: HTMLElement;
+  private startCommand!: Command;
 
   async onload(): Promise<void> {
     await this.loadSettings();
@@ -38,7 +40,7 @@ export default class RandomReviewPlugin extends Plugin {
   }
 
   private registerStartCommand(): void {
-    this.addCommand({
+    this.startCommand = this.addCommand({
       id: "start-review",
       name: getLang(this.settings.language).startReview,
       callback: () => {
@@ -85,10 +87,9 @@ export default class RandomReviewPlugin extends Plugin {
 
   /** 语言切换后刷新命令名与 Ribbon 提示 */
   refreshUIStrings(): void {
-    if (typeof this.removeCommand === "function") {
-      this.removeCommand("start-review");
+    if (this.startCommand) {
+      this.startCommand.name = getLang(this.settings.language).startReview;
     }
-    this.registerStartCommand();
     this.ribbonIcon?.setAttribute(
       "aria-label",
       getLang(this.settings.language).ribbonTooltip
