@@ -36,8 +36,15 @@ export default class RandomReviewPlugin extends Plugin {
       },
     });
 
-    this.addRibbonIcon("dice", "随机复习", () => {
+    const ribbonIcon = this.addRibbonIcon("dice", "随机复习", () => {
       void this.startReview();
+    });
+
+    ribbonIcon.addEventListener("contextmenu", (e) => {
+      e.preventDefault();
+      const setting = (this.app as any).setting;
+      void setting.open();
+      void setting.openTabById(this.manifest.id);
     });
 
     this.registerEvent(
