@@ -84,13 +84,7 @@
   line-height: 1.8;
 }
 
-/* 答案显示/隐藏 */
-.random-review-hide-answers .callout-content {
-  display: none;
-}
-.random-review-show-answers .callout-content {
-  display: unset;
-}
+/* 答案显示/隐藏由 review-view.ts 直接操作 .callout-content 的 inline display 控制 */
 
 /* 空状态和错误状态 */
 .random-review-empty,

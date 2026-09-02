@@ -271,15 +271,17 @@ export class ReviewView extends ItemView {
   }
 
   private applyAnswerState(): void {
-    // 用 CSS class 控制答案显示，避免 inline style
-    if (this.answerVisible) {
-      this.noteContentEl.removeClass("random-review-hide-answers");
-      this.noteContentEl.addClass("random-review-show-answers");
-    } else {
-      this.noteContentEl.removeClass("random-review-show-answers");
-      this.noteContentEl.addClass("random-review-hide-answers");
-    }
+    // 直接操控 .callout-content 的 display，绕过 CSS class 依赖。
+    // CSS class 方案曾被 a176445 引入，但因 display:unset 与 Obsidian 内置
+    // .callout.is-collapsed 规则冲突而失效（cf67613 已验证此方案可靠）。
+    const contents = this.noteContentEl.querySelectorAll(".callout-content");
+    contents.forEach((el) => {
+      if (el instanceof HTMLElement) {
+        el.style.display = this.answerVisible ? "" : "none";
+      }
+    });
 
+    // 同步更新 callout 的 is-collapsed class，保持折叠箭头图标一致
     const callouts = this.noteContentEl.querySelectorAll(".callout");
     callouts.forEach((el) => {
       if (this.answerVisible) {
