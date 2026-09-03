@@ -208,6 +208,34 @@
   margin-top: 4px;
 }
 
+.random-review-changelog {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 4px;
+  text-align: left;
+}
+
+.changelog-item {
+  text-align: left;
+}
+
+.changelog-version {
+  display: block;
+  text-align: left;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--interactive-accent);
+  margin-bottom: 2px;
+}
+
+.changelog-text {
+  display: block;
+  text-align: left;
+  line-height: 1.6;
+  color: var(--text-normal);
+}
+
 .profile-tag-list {
   display: flex;
   flex-wrap: wrap;
@@ -263,7 +291,89 @@
 }
 
 .property-count-input {
-  width: 60px;
+  width: 72px;
+  flex-shrink: 0;
+}
+
+.property-group-count-label {
+  color: var(--text-muted);
+  font-size: 0.9em;
+  white-space: nowrap;
+}
+
+/* 属性名/属性值等输入框的占位提示要清晰可见（Obsidian 默认偏淡） */
+.property-condition-row input::placeholder,
+.property-group-header input::placeholder {
+  color: var(--text-muted);
+  opacity: 1;
+}
+
+/* 属性筛选条件组 */
+.property-groups {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 6px 0 12px;
+}
+
+.property-group {
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 8px;
+  padding: 10px 12px;
+  background: var(--background-secondary);
+}
+
+.property-group-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.property-group-title {
+  font-weight: 600;
+  color: var(--text-normal);
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.property-conditions {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 10px 0;
+}
+
+.property-condition-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.property-condition-row select {
+  width: auto;
+  flex-shrink: 0;
+}
+
+.property-condition-row input {
+  flex: 1;
+  min-width: 0;
+}
+
+.property-add-condition {
+  background: none;
+  border: 1px dashed var(--background-modifier-border);
+  border-radius: 6px;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 5px 10px;
+  font-size: 0.9em;
+}
+
+.property-add-condition:hover {
+  color: var(--text-normal);
+  border-color: var(--interactive-accent);
 }
 
 /* 响应式：小屏幕适配 */

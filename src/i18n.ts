@@ -9,15 +9,34 @@ const zh = {
   // 设置页顶部
   tabGeneral: "通用",
   tabExtraction: "抽取控制",
-  languageSetting: "语言",
+  languageSetting: "语言【Language】",
   languageDesc: "设置界面显示语言",
   pluginIntroTitle: "插件介绍",
   pluginIntro: "从指定文件夹随机抽取笔记，支持标签和属性筛选，在全屏视图中逐篇浏览，用折叠 callout 显示/隐藏答案。适合闪卡复习、随机浏览和测验模拟。",
   usageTitle: "使用方法",
   usageItems: [
-    "在「抽取控制」中选择目标文件夹并配置筛选条件",
+    "在「抽取控制」中选择目标文件夹，并按需设置标签、排除文件夹、属性（属性可组成条件组，组内条件需全部满足）等筛选",
     "通过命令面板、Ribbon 图标或右键文件夹启动复习",
     "用 ← → 或空格切换笔记，按 A 显示/隐藏答案，Esc 退出",
+  ],
+  updateLogTitle: "更新日志",
+  updateLogItems: [
+    {
+      version: "1.1.3",
+      text: "属性筛选支持条件组：组内多条条件需全部满足（AND），不同组之间为任一满足（OR），每组可独立设置抽取数量；每个条件支持 等于/包含/不等于。",
+    },
+    {
+      version: "1.1.2",
+      text: "复习视图内的内部链接现在可点击，点击后分屏打开目标笔记。",
+    },
+    {
+      version: "1.1.0",
+      text: "设置页分为「通用」与「抽取控制」两个选项卡，新增中英文界面语言切换。",
+    },
+    {
+      version: "1.0.0",
+      text: "首个版本：从指定文件夹按标签/属性筛选随机抽取笔记，全屏复习并支持答案折叠/展开。",
+    },
   ],
 
   // 抽取控制
@@ -38,11 +57,17 @@ const zh = {
   excludeTags: "排除标签",
   excludeTagsDesc: "排除包含以下任一标签的笔记（每行一个）",
   propertyFilterHeading: "属性筛选",
-  propertyFilterDesc: "按属性分别抽取，各条件独立匹配（OR），合并后随机排列",
+  propertyFilterDesc: "属性按「条件组」筛选：一个组内的多条条件需全部满足（AND）；不同组之间为任一满足（OR），每组可独立设置抽取数量。",
   propertyKey: "属性名",
   propertyValue: "属性值",
-  propertyCount: "数量",
-  addPropertyFilter: "+ 添加属性筛选",
+  propertyCount: "抽取数量",
+  propertyGroupTitle: "条件组",
+  operatorEquals: "等于",
+  operatorContains: "包含",
+  operatorNotEquals: "不等于",
+  addPropertyCondition: "+ 添加条件",
+  removeCondition: "移除条件",
+  addPropertyGroup: "+ 添加条件组",
   extractionRuleHeading: "抽取规则",
   pickCount: "抽取数量",
   pickCountDesc: "未设置属性筛选时的默认抽取数量",
@@ -81,9 +106,28 @@ const en = {
   pluginIntro: "Randomly pick notes from a folder with tag and property filtering, browse them one by one in a fullscreen view, and show/hide answers via folded callouts. Ideal for flashcard review, random browsing, and quiz simulation.",
   usageTitle: "Usage",
   usageItems: [
-    "In \"Extraction Control\", pick a target folder and configure filters",
+    "In \"Extraction Control\", pick a target folder and configure tags, excluded folders, and property filters (properties can be grouped into AND condition groups)",
     "Launch the review via the command palette, the ribbon icon, or the folder context menu",
     "Use ← → or Space to switch notes, press A to show/hide the answer, and Esc to exit",
+  ],
+  updateLogTitle: "Changelog",
+  updateLogItems: [
+    {
+      version: "1.1.3",
+      text: "Property filtering now uses condition groups: every condition inside a group must match (AND), different groups are alternatives (OR), each with its own pick count; each condition supports equals / contains / not equals.",
+    },
+    {
+      version: "1.1.2",
+      text: "Internal links inside the review view are now clickable and open their target in a split pane.",
+    },
+    {
+      version: "1.1.0",
+      text: "Settings split into General / Extraction Control tabs; added Chinese/English interface language.",
+    },
+    {
+      version: "1.0.0",
+      text: "Initial release: randomly pick notes from a folder filtered by tags/properties and review them fullscreen with foldable answers.",
+    },
   ],
 
   // 抽取控制
@@ -104,11 +148,17 @@ const en = {
   excludeTags: "Exclude Tags",
   excludeTagsDesc: "Exclude notes with any of these tags (one per line)",
   propertyFilterHeading: "Property Filtering",
-  propertyFilterDesc: "Pick separately per property (OR), then shuffle the merged result",
+  propertyFilterDesc: "Properties are grouped: every condition inside a group must match (AND); different groups are alternatives (OR), each with its own pick count.",
   propertyKey: "Property name",
   propertyValue: "Property value",
-  propertyCount: "Count",
-  addPropertyFilter: "+ Add property filter",
+  propertyCount: "Pick count",
+  propertyGroupTitle: "Condition group",
+  operatorEquals: "equals",
+  operatorContains: "contains",
+  operatorNotEquals: "not equals",
+  addPropertyCondition: "+ Add condition",
+  removeCondition: "Remove condition",
+  addPropertyGroup: "+ Add condition group",
   extractionRuleHeading: "Extraction Rules",
   pickCount: "Pick Count",
   pickCountDesc: "Default number of notes when no property filters are set",

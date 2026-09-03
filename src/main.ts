@@ -8,7 +8,8 @@ import {
 import {
   VIEW_TYPE_RANDOM_REVIEW,
   RandomReviewSettings,
-  FolderProfile,
+  PropertyGroup,
+  LegacyPropertyFilter,
   DEFAULT_SETTINGS,
 } from "./constants";
 import { RandomReviewSettingTab } from "./settings";
@@ -20,6 +21,39 @@ import { getLang } from "./i18n";
 interface SettingManager {
   open(): Promise<void>;
   openTabById(id: string): Promise<void>;
+}
+
+type LegacyStoredData = Partial<RandomReviewSettings> & {
+  propertyFilters?: LegacyPropertyFilter[];
+  profiles?: Record<
+    string,
+    RandomReviewSettings["profiles"][string] & { propertyFilters?: LegacyPropertyFilter[] }
+  >;
+};
+
+/** 把旧版扁平属性筛选（v≤1.1.2）迁移为条件组：每个旧条件单独成组，组间仍为 OR */
+function migrateLegacyPropertyFilters(holder: {
+  propertyGroups?: PropertyGroup[];
+  propertyFilters?: LegacyPropertyFilter[];
+}): void {
+  if (!Array.isArray(holder.propertyGroups)) {
+    holder.propertyGroups = (holder.propertyFilters ?? [])
+      .filter((f) => f.key && f.value)
+      .map((f) => ({
+        conditions: [
+          {
+            key: f.key,
+            value: f.value,
+            operator:
+              f.operator === "contains" || f.operator === "not-equals"
+                ? f.operator
+                : "equals",
+          },
+        ],
+        count: f.count ?? 0,
+      }));
+  }
+  delete holder.propertyFilters;
 }
 
 export default class RandomReviewPlugin extends Plugin {
@@ -102,21 +136,22 @@ export default class RandomReviewPlugin extends Plugin {
   onunload(): void {}
 
   async loadSettings(): Promise<void> {
-    const data = (await this.loadData()) as Partial<RandomReviewSettings> | null;
-    this.settings = Object.assign({}, DEFAULT_SETTINGS, data ?? {});
+    const raw = (await this.loadData()) as LegacyStoredData | null;
+    const data = raw ?? {};
+
+    // 迁移旧版存档：顶层与每个文件夹档案的扁平 propertyFilters → 条件组
+    migrateLegacyPropertyFilters(data);
+    const profiles = data.profiles;
+    if (profiles) {
+      for (const path of Object.keys(profiles)) {
+        migrateLegacyPropertyFilters(profiles[path]);
+      }
+    }
+
+    this.settings = Object.assign({}, DEFAULT_SETTINGS, data);
 
     if (!this.settings.profiles) {
       this.settings.profiles = {};
-    }
-
-    const fixCount = (filters: { count?: number }[]): void => {
-      for (const f of filters) {
-        if (f.count === undefined) f.count = 0;
-      }
-    };
-    fixCount(this.settings.propertyFilters);
-    for (const profile of Object.values<FolderProfile>(this.settings.profiles)) {
-      if (profile.propertyFilters.length > 0) fixCount(profile.propertyFilters);
     }
 
     await this.saveSettings();

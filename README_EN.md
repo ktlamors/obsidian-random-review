@@ -14,12 +14,16 @@ Randomly select notes from specified folders with tag and property filtering, br
 
 - **🎲 Random Extraction** — Pick notes randomly from a target folder with configurable count
 - **🏷️ Tag Filtering** — Include or exclude notes by tags (OR logic)
-- **📋 Property Filtering** — Filter by frontmatter properties with per-condition pick counts (OR logic)
+- **📋 Property Filtering** — Filter into AND condition groups with per-group pick counts; different groups are alternatives (OR)
 - **📂 Folder Exclusion** — Exclude specific sub-folders from extraction
 - **👁 Answer Toggle** — Expand/collapse folded callouts (`> [!NOTE]-`) with one click
 - **✏️ Edit While Reviewing** — Open notes in a split pane for editing, auto-refresh on save
 - **💾 Configuration Profiles** — Auto-save and restore settings per target folder
 - **🖱️ Three Launch Methods** — Command palette / Ribbon icon / Folder context menu
+
+### 1.1.3
+
+**New**: Property filtering upgraded to condition groups — all conditions inside a group must match (AND), different groups are alternatives (OR), each with its own pick count; each condition supports equals / contains / not equals.
 
 ### 1.1.2
 
@@ -52,7 +56,7 @@ Settings → Community Plugins → Random Review → Options:
 - **Target Folder**: Select the folder containing notes to review
 - **Exclude Folders**: Sub-folders to skip
 - **Include/Exclude Tags**: Filter by tags (one per line)
-- **Property Filters**: Filter by frontmatter properties, each with independent pick count (OR logic)
+- **Property Filters**: Filter into AND condition groups; groups are alternatives (OR), each with its own pick count; each condition supports equals / contains / not equals
 - **Pick Count**: Default number of notes when no property filters are set
 - **Answer Default Collapsed**: Initial fold state for callouts
 

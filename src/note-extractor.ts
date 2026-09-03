@@ -80,51 +80,48 @@ export function extractNotes(
   }
 
   // 5. 按属性分别抽取（OR 逻辑，每个条件独立抽题后合并）
-  if (settings.propertyFilters.length > 0) {
-    const validFilters = settings.propertyFilters.filter(
-      (f) => f.key !== "" && f.value !== ""
-    );
+  // 5. 按属性组抽取（组内 AND，组间 OR，每组独立数量）
+  if (settings.propertyGroups.length > 0) {
+    const resultSet = new Set<TFile>();
 
-    if (validFilters.length > 0) {
-      // 为每个条件独立筛选并抽取
-      const resultSet = new Set<TFile>();
+    settings.propertyGroups.forEach((group) => {
+      // 数量为 0 或没有完整条件则跳过此组
+      if (group.count <= 0) return;
+      const conditions = group.conditions.filter(
+        (c) => c.key !== "" && c.value !== ""
+      );
+      if (conditions.length === 0) return;
 
-      validFilters.forEach((filter) => {
-        // 数量为 0 则跳过此条件
-        if (filter.count <= 0) return;
+      // 筛选满足组内全部条件（AND）的笔记
+      const matched = files.filter((file) => {
+        const cache = app.metadataCache.getFileCache(file);
+        if (!cache?.frontmatter) return false;
 
-        // 筛选匹配此条件的笔记
-        const matched = files.filter((file) => {
-          const cache = app.metadataCache.getFileCache(file);
-          if (!cache?.frontmatter) return false;
-
-          const frontmatter = cache.frontmatter as Record<string, unknown>;
-          const actualValue = frontmatter[filter.key];
+        const frontmatter = cache.frontmatter as Record<string, unknown>;
+        return conditions.every((cond) => {
+          const actualValue = frontmatter[cond.key];
           if (actualValue === undefined || actualValue === null) return false;
 
           const actualStr = String(actualValue);
-          switch (filter.operator) {
+          switch (cond.operator) {
             case "equals":
-              return actualStr === filter.value;
+              return actualStr === cond.value;
             case "contains":
-              return actualStr.includes(filter.value);
+              return actualStr.includes(cond.value);
             case "not-equals":
-              return actualStr !== filter.value;
+              return actualStr !== cond.value;
             default:
               return false;
           }
         });
-
-        // 随机选取此条件指定数量的笔记
-        const shuffled = fisherYatesShuffle([...matched]);
-        const picked = shuffled.slice(0, filter.count);
-
-        // 加入结果集（自动去重）
-        picked.forEach((f) => resultSet.add(f));
       });
 
-      files = [...resultSet];
-    }
+      // 随机选取此组指定数量的笔记，加入结果集（自动去重）
+      const picked = fisherYatesShuffle([...matched]).slice(0, group.count);
+      picked.forEach((f) => resultSet.add(f));
+    });
+
+    files = [...resultSet];
   }
 
   // 6. 检查是否有候选笔记
@@ -139,7 +136,7 @@ export function extractNotes(
   }
 
   // 8. 若未设置属性筛选，使用全局抽取数量
-  if (settings.propertyFilters.length === 0) {
+  if (settings.propertyGroups.length === 0) {
     if (files.length < settings.pickCount) {
       new Notice(`只有 ${files.length} 篇符合条件的笔记`);
     }

@@ -6,7 +6,12 @@ import {
   TAbstractFile,
 } from "obsidian";
 import type RandomReviewPlugin from "./main";
-import { DEFAULT_PROFILE } from "./constants";
+import {
+  DEFAULT_PROFILE,
+  PropertyGroup,
+  PropertyCondition,
+  PropertyOperator,
+} from "./constants";
 import { getLang, Language } from "./i18n";
 
 // ──────────────────────────────────────────────
@@ -136,6 +141,14 @@ export class RandomReviewSettingTab extends PluginSettingTab {
     const usageList = containerEl.createEl("ul", { cls: "random-review-usage" });
     t.usageItems.forEach((item) => {
       usageList.createEl("li", { text: item });
+    });
+
+    new Setting(containerEl).setName(t.updateLogTitle).setHeading();
+    const logList = containerEl.createDiv("random-review-changelog");
+    t.updateLogItems.forEach((item) => {
+      const li = logList.createDiv("changelog-item");
+      li.createSpan("changelog-version").setText(item.version);
+      li.createSpan("changelog-text").setText(item.text);
     });
   }
 
@@ -292,22 +305,28 @@ export class RandomReviewSettingTab extends PluginSettingTab {
           })
       );
 
-    // ── 属性筛选 ──
+    // ── 属性筛选（条件组） ──
     new Setting(containerEl).setName(t.propertyFilterHeading).setHeading();
     containerEl.createEl("p", {
       text: t.propertyFilterDesc,
       cls: "setting-item-description",
     });
-    this.plugin.settings.propertyFilters.forEach((filter, index) => {
-      this.addPropertyFilterSetting(containerEl, filter, index, t);
-    });
+    const groupsEl = containerEl.createDiv("property-groups");
+    // 只重建属性组区域，避免整页 display() 导致设置滚动条跳到顶部
+    const refresh = (): void => {
+      groupsEl.empty();
+      this.plugin.settings.propertyGroups.forEach((group, i) => {
+        this.renderPropertyGroup(groupsEl, group, i, t, refresh);
+      });
+    };
+    refresh();
     new Setting(containerEl).addButton((btn) =>
-      btn.setButtonText(t.addPropertyFilter).onClick(async () => {
-        this.plugin.settings.propertyFilters.push({
-          key: "", value: "", operator: "equals", count: 0,
+      btn.setButtonText(t.addPropertyGroup).onClick(() => {
+        this.plugin.settings.propertyGroups.push({
+          count: 0,
+          conditions: [{ key: "", value: "", operator: "equals" }],
         });
-        await this.plugin.saveSettings();
-        this.display();
+        void this.plugin.saveSettings().then(refresh);
       })
     );
 
@@ -370,7 +389,10 @@ export class RandomReviewSettingTab extends PluginSettingTab {
       excludeFolders: [...this.plugin.settings.excludeFolders],
       includeTags: [...this.plugin.settings.includeTags],
       excludeTags: [...this.plugin.settings.excludeTags],
-      propertyFilters: this.plugin.settings.propertyFilters.map((f) => ({ ...f })),
+      propertyGroups: this.plugin.settings.propertyGroups.map((g) => ({
+        count: g.count,
+        conditions: g.conditions.map((c) => ({ ...c })),
+      })),
       pickCount: this.plugin.settings.pickCount,
       randomOrder: this.plugin.settings.randomOrder,
     };
@@ -382,55 +404,138 @@ export class RandomReviewSettingTab extends PluginSettingTab {
       this.plugin.settings.excludeFolders = [...saved.excludeFolders];
       this.plugin.settings.includeTags = [...saved.includeTags];
       this.plugin.settings.excludeTags = [...saved.excludeTags];
-      this.plugin.settings.propertyFilters = saved.propertyFilters.map((f) => ({ ...f }));
+      this.plugin.settings.propertyGroups = saved.propertyGroups.map((g) => ({
+        count: g.count,
+        conditions: g.conditions.map((c) => ({ ...c })),
+      }));
       this.plugin.settings.pickCount = saved.pickCount;
       this.plugin.settings.randomOrder = saved.randomOrder;
     } else {
       this.plugin.settings.excludeFolders = [...DEFAULT_PROFILE.excludeFolders];
       this.plugin.settings.includeTags = [...DEFAULT_PROFILE.includeTags];
       this.plugin.settings.excludeTags = [...DEFAULT_PROFILE.excludeTags];
-      this.plugin.settings.propertyFilters = DEFAULT_PROFILE.propertyFilters.map((f) => ({ ...f }));
+      this.plugin.settings.propertyGroups = DEFAULT_PROFILE.propertyGroups.map((g) => ({
+        count: g.count,
+        conditions: g.conditions.map((c) => ({ ...c })),
+      }));
       this.plugin.settings.pickCount = DEFAULT_PROFILE.pickCount;
       this.plugin.settings.randomOrder = DEFAULT_PROFILE.randomOrder;
     }
   }
 
   // ──────────────────────────────────────────
-  // 属性筛选行
+  // 属性筛选（条件组）UI
   // ──────────────────────────────────────────
-  private addPropertyFilterSetting(
-    containerEl: HTMLElement,
-    filter: { key: string; value: string; operator: string; count: number },
+  private renderPropertyGroup(
+    parent: HTMLElement,
+    group: PropertyGroup,
     index: number,
-    t: ReturnType<typeof getLang>
+    t: ReturnType<typeof getLang>,
+    onRefresh: () => void
   ): void {
-    const setting = new Setting(containerEl);
-    setting.addText((text) =>
-      text.setPlaceholder(t.propertyKey).setValue(filter.key).onChange(async (v) => {
-        this.plugin.settings.propertyFilters[index].key = v;
-        await this.plugin.saveSettings();
-      })
+    const box = parent.createDiv("property-group");
+
+    // 组头：组名 + 抽取数量 + 删除组
+    const header = box.createDiv("property-group-header");
+    header.createSpan("property-group-title").setText(
+      `${t.propertyGroupTitle} ${index + 1}`
     );
-    setting.addText((text) =>
-      text.setPlaceholder(t.propertyValue).setValue(filter.value).onChange(async (v) => {
-        this.plugin.settings.propertyFilters[index].value = v;
-        await this.plugin.saveSettings();
-      })
-    );
-    setting.addText((text) => {
-      text.setPlaceholder(t.propertyCount).setValue(String(filter.count || "")).onChange(async (v) => {
-        const n = parseInt(v);
-        this.plugin.settings.propertyFilters[index].count = isNaN(n) ? 0 : Math.max(0, n);
-        await this.plugin.saveSettings();
-      });
-      text.inputEl.addClass("property-count-input");
+    header.createSpan("property-group-count-label").setText(t.propertyCount);
+    const countInput = header.createEl("input", {
+      type: "text",
+      cls: "property-count-input",
+      value: String(group.count || ""),
+      placeholder: "0",
     });
-    setting.addExtraButton((btn) =>
-      btn.setIcon("cross").setTooltip(t.remove).onClick(async () => {
-        this.plugin.settings.propertyFilters.splice(index, 1);
-        await this.plugin.saveSettings();
-        this.display();
-      })
-    );
+    countInput.setAttr("aria-label", t.propertyCount);
+    countInput.addEventListener("input", () => {
+      const n = parseInt(countInput.value);
+      group.count = isNaN(n) ? 0 : Math.max(0, n);
+      void this.plugin.saveSettings();
+    });
+    const removeBtn = header.createEl("button", {
+      cls: "exclude-folder-remove",
+      text: "✕",
+    });
+    removeBtn.setAttr("aria-label", t.remove);
+    removeBtn.addEventListener("click", () => {
+      const gi = this.plugin.settings.propertyGroups.indexOf(group);
+      if (gi >= 0) this.plugin.settings.propertyGroups.splice(gi, 1);
+      void this.plugin.saveSettings().then(onRefresh);
+    });
+
+    // 条件列表
+    const condList = box.createDiv("property-conditions");
+    group.conditions.forEach((cond) => {
+      this.renderPropertyCondition(condList, group, cond, t, onRefresh);
+    });
+
+    const addCondBtn = box.createEl("button", {
+      cls: "property-add-condition",
+      text: t.addPropertyCondition,
+    });
+    addCondBtn.addEventListener("click", () => {
+      group.conditions.push({ key: "", value: "", operator: "equals" });
+      void this.plugin.saveSettings().then(onRefresh);
+    });
+  }
+
+  private renderPropertyCondition(
+    parent: HTMLElement,
+    group: PropertyGroup,
+    cond: PropertyCondition,
+    t: ReturnType<typeof getLang>,
+    onRefresh: () => void
+  ): void {
+    const row = parent.createDiv("property-condition-row");
+
+    const opSelect = row.createEl("select");
+    opSelect.addClass("dropdown");
+    const ops: [PropertyOperator, string][] = [
+      ["equals", t.operatorEquals],
+      ["contains", t.operatorContains],
+      ["not-equals", t.operatorNotEquals],
+    ];
+    ops.forEach(([value, label]) => {
+      const opt = opSelect.createEl("option");
+      opt.value = value;
+      opt.text = label;
+    });
+    opSelect.value = cond.operator;
+    opSelect.addEventListener("change", () => {
+      cond.operator = opSelect.value as PropertyOperator;
+      void this.plugin.saveSettings();
+    });
+
+    const keyInput = row.createEl("input", { type: "text" });
+    keyInput.setAttr("placeholder", t.propertyKey);
+    keyInput.value = cond.key;
+    keyInput.addEventListener("input", () => {
+      cond.key = keyInput.value;
+      void this.plugin.saveSettings();
+    });
+
+    const valueInput = row.createEl("input", { type: "text" });
+    valueInput.setAttr("placeholder", t.propertyValue);
+    valueInput.value = cond.value;
+    valueInput.addEventListener("input", () => {
+      cond.value = valueInput.value;
+      void this.plugin.saveSettings();
+    });
+
+    const removeBtn = row.createEl("button", {
+      cls: "exclude-folder-remove",
+      text: "✕",
+    });
+    removeBtn.setAttr("aria-label", t.removeCondition);
+    removeBtn.addEventListener("click", () => {
+      const gi = this.plugin.settings.propertyGroups.indexOf(group);
+      if (gi >= 0) {
+        const conds = this.plugin.settings.propertyGroups[gi].conditions;
+        const ci = conds.indexOf(cond);
+        if (ci >= 0) conds.splice(ci, 1);
+      }
+      void this.plugin.saveSettings().then(onRefresh);
+    });
   }
 }
