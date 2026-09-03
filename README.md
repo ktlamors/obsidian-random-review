@@ -1,91 +1,105 @@
-# Random Review — Obsidian Random Note Review Plugin
+# Random Review — Obsidian 随机复习插件
 
-[![简体中文](https://img.shields.io/badge/简体中文-README_CN-blue)](./README_CN.md)
+[![English](https://img.shields.io/badge/English-README_EN-blue)](./README_EN.md)
 
-Randomly select notes from specified folders with tag and property filtering, browse them fullscreen with answer toggle. Ideal for flashcard review, random browsing, and quiz simulation.
+[![Obsidian](https://img.shields.io/badge/Obsidian-Plugin-purple.svg)](https://obsidian.md)
+[![Release](https://img.shields.io/github/v/release/ktlamors/obsidian-random-review)](https://github.com/ktlamors/obsidian-random-review/releases)
+[![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![GitHub Stars](https://img.shields.io/github/stars/ktlamors/obsidian-random-review)](https://github.com/ktlamors/obsidian-random-review)
+[![Last Commit](https://img.shields.io/github/last-commit/ktlamors/obsidian-random-review)](https://github.com/ktlamors/obsidian-random-review)
 
-## Features
+从指定文件夹中按规则随机抽取笔记，全屏逐篇浏览复习，支持答案折叠/展开。适用于闪卡自测、随机回顾、模拟抽题等场景。
 
-- **🎲 Random Extraction** — Pick notes randomly from a target folder with configurable count
-- **🏷️ Tag Filtering** — Include or exclude notes by tags (OR logic)
-- **📋 Property Filtering** — Filter by frontmatter properties with per-condition pick counts (OR logic)
-- **📂 Folder Exclusion** — Exclude specific sub-folders from extraction
-- **🖥️ Fullscreen View** — Immersive review view with keyboard shortcuts
-- **👁 Answer Toggle** — Expand/collapse folded callouts (`> [!NOTE]-`) with one click
-- **✏️ Edit While Reviewing** — Open notes in a split pane for editing, auto-refresh on save
-- **💾 Configuration Profiles** — Auto-save and restore settings per target folder
-- **🖱️ Three Launch Methods** — Command palette / Ribbon icon / Folder context menu
+## 功能
 
-## Installation
+- **🎲 随机抽取** — 从指定文件夹随机抽取笔记，支持设置抽取数量
+- **🏷️ 标签筛选** — 按包含/排除标签过滤笔记（OR 逻辑）
+- **📋 属性筛选** — 按 frontmatter 属性分别抽题，每个条件独立设置数量（OR 逻辑）
+- **📂 文件夹排除** — 排除目标文件夹下的特定子文件夹
+- **👁 答案切换** — 一键展开/折叠笔记中的折叠 Callout（`> [!NOTE]-` 语法）
+- **✏️ 边看边改** — 复习中可在右侧分屏打开笔记编辑，保存后自动刷新
+- **💾 配置档案** — 每个目标文件夹独立保存配置，切换自动恢复
+- **🖱️ 三种启动方式** — 命令面板 / Ribbon 图标 / 文件夹右键菜单
 
-### Community Plugin (Recommended)
-Search for "**Random Review**" in the Obsidian Community Plugin marketplace.
+### 1.1.2
 
-### Manual
-Download `main.js`, `manifest.json`, `styles.css` from [Releases](https://github.com/ktlamors/obsidian-random-review/releases) and place them in:
+**新增**：复习视图下内部链接可点击，点击后分屏显示点击内容。
+
+## 安装
+
+### 社区市场（推荐）
+
+在 Obsidian 社区插件市场搜索「**Random Review**」安装。
+
+### 手动安装
+
+从 [Releases](https://github.com/ktlamors/obsidian-random-review/releases) 下载 `main.js`、`manifest.json`、`styles.css`，放入：
+
 ```
 <vault>/.obsidian/plugins/random-review/
 ```
 
 ### BRAT
-Add repository: `ktlamors/obsidian-random-review`
 
-## Usage
+添加仓库：`ktlamors/obsidian-random-review`
 
-### 1. Configuration
+## 使用方法
 
-Settings → Community Plugins → Random Review → Options:
+### 1. 配置
 
-- **Target Folder**: Select the folder containing notes to review
-- **Exclude Folders**: Sub-folders to skip
-- **Include/Exclude Tags**: Filter by tags (one per line)
-- **Property Filters**: Filter by frontmatter properties, each with independent pick count (OR logic)
-- **Pick Count**: Default number of notes when no property filters are set
-- **Answer Default Collapsed**: Initial fold state for callouts
+设置 → 第三方插件 → Random Review → 设置：
 
-Configuration is **auto-saved per folder** — switching target folders preserves settings for each one.
+- **目标文件夹**：选择笔记所在的文件夹
+- **排除文件夹**：选择要跳过的子文件夹
+- **包含/排除标签**：按标签筛选
+- **属性筛选**：按 frontmatter 属性分条件独立抽题，每个条件设置抽取数量
+- **抽取数量**：未设置属性筛选时的默认数量
+- **答案默认折叠**：进入复习时 Callout 的初始状态
 
-### 2. Launch
+切换目标文件夹时，当前配置**自动保存**为档案，切回时**自动恢复**。
 
-Three ways:
-- `Ctrl+P` → Search "启动随机复习"
-- Click 🎲 icon in the left ribbon
-- Right-click a folder → "从此文件夹随机抽取"
+### 2. 启动复习
 
-### 3. Navigation
+三种方式：
 
-| Action | Button / Shortcut |
-|--------|-------------------|
-| Next | Click「下一题 →」or press `→` / `Space` |
-| Previous | Click「← 上一题」or press `←` |
-| Show/Hide Answer | Click toggle button or press `A` |
-| Edit Original Note | Click「编辑原笔记」to open split pane |
-| Exit | Click `✕` or press `Esc` |
+- `Ctrl+P` → 搜索「启动随机复习」
+- 点击左侧边栏 🎲 图标
+- 右键文件夹 →「从此文件夹随机抽取」
 
-### 4. Note Format
+### 3. 复习操作
 
-Place answers inside a **folded callout**:
+| 操作          | 按钮/快捷键                             |
+| ------------- | --------------------------------------- |
+| 下一题        | 点击「下一题 →」或按`→` / `Space` |
+| 上一题        | 点击「← 上一题」或按`←`             |
+| 显示/隐藏答案 | 点击按钮或按`A`                       |
+| 编辑原笔记    | 点击「编辑原笔记」，右侧分屏编辑        |
+| 退出          | 点击`✕` 或按 `Esc`                 |
+
+### 4. 笔记格式
+
+答案部分使用 Obsidian **折叠 Callout** 语法：
 
 ```markdown
-Question content…
+题目内容……
 
-> [!NOTE]- Answer & Explanation
-> The correct answer is C
-> Explanation: …
+> [!NOTE]- 答案与解析
+> 正确答案是 C
+> 解析：……
 ```
 
-Click "Show Answer" during review to expand all callouts.
+复习时点击「显示答案」即可展开 Callout 内容。
 
-## Keyboard Shortcuts
+## 键盘快捷键
 
-| Key | Action |
-|-----|--------|
-| `→` / `Space` | Next note |
-| `←` | Previous note |
-| `A` | Toggle answer visibility |
-| `Esc` | Exit review |
+| 键                 | 功能          |
+| ------------------ | ------------- |
+| `→` / `Space` | 下一题        |
+| `←`             | 上一题        |
+| `A`              | 显示/隐藏答案 |
+| `Esc`            | 退出复习      |
 
-## Development
+## 开发
 
 ```bash
 git clone https://github.com/ktlamors/obsidian-random-review.git
@@ -94,6 +108,6 @@ npm install
 npm run build
 ```
 
-## License
+## 许可
 
 MIT

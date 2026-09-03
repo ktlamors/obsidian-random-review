@@ -14,6 +14,7 @@ export class ReviewView extends ItemView {
   private currentIndex: number = 0;
   private answerVisible: boolean = false;
   private boundHandleKeydown = this.handleKeydown.bind(this);
+  private boundHandleLinkClick = this.handleLinkClick.bind(this);
 
   private topBarEl!: HTMLElement;
   private noteContentEl!: HTMLElement;
@@ -77,6 +78,8 @@ export class ReviewView extends ItemView {
     this.noteContentEl = container.createDiv("random-review-content");
     // 让内容区可接收焦点，使键盘事件能冒泡到容器上的 keydown 监听
     this.noteContentEl.setAttr("tabindex", "-1");
+    // 自定义视图不会自动拦截内部链接点击，需自行委托处理
+    this.noteContentEl.addEventListener("click", this.boundHandleLinkClick);
 
     // 底部导航栏
     this.navBarEl = container.createDiv("random-review-navbar");
@@ -140,6 +143,7 @@ export class ReviewView extends ItemView {
 
   async onClose(): Promise<void> {
     this.containerEl.removeEventListener("keydown", this.boundHandleKeydown);
+    this.noteContentEl.removeEventListener("click", this.boundHandleLinkClick);
     if (this.isEditing) this.closeEditPane();
   }
 
@@ -354,6 +358,21 @@ export class ReviewView extends ItemView {
     this.answerVisible = !this.answerVisible;
     this.applyAnswerState();
     this.updateUIState();
+  }
+
+  private handleLinkClick(event: MouseEvent): void {
+    if (event.button !== 0) return;
+    const target = event.target as HTMLElement | null;
+    const link = target?.closest("a.internal-link") as HTMLAnchorElement | null;
+    if (!link) return;
+
+    const href = link.getAttribute("data-href") ?? link.getAttribute("href");
+    const file = this.queue[this.currentIndex];
+    if (!href || !file) return;
+
+    event.preventDefault();
+    event.stopPropagation();
+    void this.app.workspace.openLinkText(href, file.path, "split");
   }
 
   private handleKeydown(event: KeyboardEvent): void {
