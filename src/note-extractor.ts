@@ -12,21 +12,26 @@ export function extractNotes(
   // 1. 获取所有 markdown 文件
   let files = app.vault.getMarkdownFiles();
 
-  // 2. 按文件夹筛选
+  // 2. 按文件夹筛选（兼容 Android 端带任意长度设备路径前缀的 TFile.path）
   if (settings.folderPath) {
-    const normalizedPath = settings.folderPath.replace(/^\/+|\/+$/g, "");
+    const target = settings.folderPath.replace(/^\/+|\/+$/g, "");
     files = files.filter((file) => {
-      const dir = file.path.substring(0, file.path.lastIndexOf("/"));
-      return dir === normalizedPath || file.path.startsWith(normalizedPath + "/");
+      const norm = file.path.replace(/^\/+/, "");
+      const lastSlash = norm.lastIndexOf("/");
+      const dir = lastSlash >= 0 ? norm.substring(0, lastSlash) : "";
+      return dir === target || norm.startsWith(target + "/");
     });
   }
 
   // 3. 排除子文件夹
   if (settings.excludeFolders.length > 0) {
     files = files.filter((file) => {
+      const norm = file.path.replace(/^\/+/, "");
+      const lastSlash = norm.lastIndexOf("/");
+      const dir = lastSlash >= 0 ? norm.substring(0, lastSlash) : "";
       return !settings.excludeFolders.some((exclude) => {
-        const normalized = exclude.replace(/^\/+|\/+$/g, "");
-        return file.path.startsWith(normalized + "/");
+        const target = exclude.replace(/^\/+|\/+$/g, "");
+        return dir === target || dir.startsWith(target + "/");
       });
     });
   }
