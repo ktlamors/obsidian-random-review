@@ -7,7 +7,6 @@ import {
 } from "obsidian";
 import type RandomReviewPlugin from "./main";
 import {
-  DEFAULT_PROFILE,
   PropertyGroup,
   PropertyCondition,
   PropertyOperator,
@@ -156,6 +155,9 @@ export class RandomReviewSettingTab extends PluginSettingTab {
   // 抽取控制选项卡（原有设置内容）
   // ──────────────────────────────────────────
   private displayExtraction(containerEl: HTMLElement, t: ReturnType<typeof getLang>): void {
+    // ── 配置档案（置顶） ──
+    this.renderProfileSection(containerEl, t);
+
     // ── 笔记筛选 ──
     new Setting(containerEl).setName(t.noteFilterHeading).setHeading();
 
@@ -174,61 +176,11 @@ export class RandomReviewSettingTab extends PluginSettingTab {
         });
         dropdown.setValue(this.plugin.settings.folderPath);
         dropdown.onChange(async (value) => {
-          this.saveCurrentToProfile();
           this.plugin.settings.folderPath = value;
-          this.loadProfile(value);
           await this.plugin.saveSettings();
           this.display();
         });
       });
-
-    // 配置档案
-    const profileKeys = Object.keys(this.plugin.settings.profiles);
-    if (profileKeys.length > 0) {
-      new Setting(containerEl).setName(t.profileHeading).setHeading();
-      containerEl.createEl("p", {
-        text: t.profileDesc,
-        cls: "setting-item-description",
-      });
-
-      const profileList = containerEl.createDiv("profile-tag-list");
-
-      profileKeys.forEach((path) => {
-        const tag = profileList.createEl("button", { cls: "profile-tag" });
-        const shortName = path.split("/").pop() || path;
-        tag.setText(shortName);
-        tag.setAttr("title", path);
-
-        if (path === this.plugin.settings.folderPath) {
-          tag.addClass("profile-tag-active");
-        }
-
-        tag.addEventListener("click", () => {
-          void (async () => {
-            this.saveCurrentToProfile();
-            this.plugin.settings.folderPath = path;
-            this.loadProfile(path);
-            await this.plugin.saveSettings();
-            this.display();
-          })();
-        });
-
-        tag.addEventListener("contextmenu", (e) => {
-          e.preventDefault();
-          void (async () => {
-            delete this.plugin.settings.profiles[path];
-            if (this.plugin.settings.folderPath === path) {
-              this.plugin.settings.folderPath = "";
-            }
-            await this.plugin.saveSettings();
-            this.display();
-          })();
-        });
-      });
-
-      const hint = containerEl.createEl("p", { cls: "profile-hint" });
-      hint.setText(t.profileHint);
-    }
 
     // 排除文件夹
     new Setting(containerEl).setName(t.excludeFoldersHeading).setHeading();
@@ -382,44 +334,84 @@ export class RandomReviewSettingTab extends PluginSettingTab {
   // 配置档案
   // ──────────────────────────────────────────
 
-  private saveCurrentToProfile(): void {
-    const path = this.plugin.settings.folderPath;
-    if (!path) return;
-    this.plugin.settings.profiles[path] = {
-      excludeFolders: [...this.plugin.settings.excludeFolders],
-      includeTags: [...this.plugin.settings.includeTags],
-      excludeTags: [...this.plugin.settings.excludeTags],
-      propertyGroups: this.plugin.settings.propertyGroups.map((g) => ({
-        count: g.count,
-        conditions: g.conditions.map((c) => ({ ...c })),
-      })),
-      pickCount: this.plugin.settings.pickCount,
-      randomOrder: this.plugin.settings.randomOrder,
-    };
-  }
+  private renderProfileSection(
+    containerEl: HTMLElement,
+    t: ReturnType<typeof getLang>
+  ): void {
+    const s = this.plugin.settings;
+    const active = this.plugin.getActiveProfile();
 
-  private loadProfile(folderPath: string): void {
-    const saved = this.plugin.settings.profiles[folderPath];
-    if (saved) {
-      this.plugin.settings.excludeFolders = [...saved.excludeFolders];
-      this.plugin.settings.includeTags = [...saved.includeTags];
-      this.plugin.settings.excludeTags = [...saved.excludeTags];
-      this.plugin.settings.propertyGroups = saved.propertyGroups.map((g) => ({
-        count: g.count,
-        conditions: g.conditions.map((c) => ({ ...c })),
-      }));
-      this.plugin.settings.pickCount = saved.pickCount;
-      this.plugin.settings.randomOrder = saved.randomOrder;
-    } else {
-      this.plugin.settings.excludeFolders = [...DEFAULT_PROFILE.excludeFolders];
-      this.plugin.settings.includeTags = [...DEFAULT_PROFILE.includeTags];
-      this.plugin.settings.excludeTags = [...DEFAULT_PROFILE.excludeTags];
-      this.plugin.settings.propertyGroups = DEFAULT_PROFILE.propertyGroups.map((g) => ({
-        count: g.count,
-        conditions: g.conditions.map((c) => ({ ...c })),
-      }));
-      this.plugin.settings.pickCount = DEFAULT_PROFILE.pickCount;
-      this.plugin.settings.randomOrder = DEFAULT_PROFILE.randomOrder;
+    new Setting(containerEl).setName(t.profileHeading).setHeading();
+    containerEl.createEl("p", {
+      text: t.profileDesc,
+      cls: "setting-item-description",
+    });
+
+    let nameInput!: HTMLInputElement;
+
+    // 档案选择器
+    new Setting(containerEl)
+      .setName(t.profileSelect)
+      .addDropdown((dd) => {
+        dd.addOption("", t.selectProfile);
+        s.profiles.forEach((p) => dd.addOption(p.id, p.name));
+        dd.setValue(s.activeProfileId ?? "");
+        dd.onChange((id) => {
+          void (async () => {
+            const p = s.profiles.find((x) => x.id === id);
+            if (!p) {
+              s.activeProfileId = null;
+              await this.plugin.saveSettings();
+              this.display();
+              return;
+            }
+            this.plugin.applyProfile(p);
+            await this.plugin.saveSettings();
+            this.display();
+          })();
+        });
+      });
+
+    // 档案名称 + 另存为
+    new Setting(containerEl)
+      .setName(t.profileName)
+      .addText((text) => {
+        text.setPlaceholder(t.profileNamePlaceholder);
+        text.setValue(active?.name ?? "");
+        nameInput = text.inputEl;
+      })
+      .addButton((btn) =>
+        btn.setButtonText(t.profileSaveAs).onClick(() => {
+          const name =
+            nameInput.value.trim() ||
+            s.folderPath.split("/").pop() ||
+            t.profileNamePlaceholder;
+          this.plugin.createProfile(name);
+          void this.plugin.saveSettings().then(() => this.display());
+        })
+      );
+
+    // 重命名 / 删除（仅当有激活档案）
+    if (active) {
+      new Setting(containerEl)
+        .addButton((btn) =>
+          btn.setButtonText(t.profileRename).onClick(() => {
+            const name = nameInput.value.trim();
+            if (name) {
+              active.name = name;
+              void this.plugin.saveSettings().then(() => this.display());
+            }
+          })
+        )
+        .addButton((btn) =>
+          btn
+            .setButtonText(t.profileDelete)
+            .setWarning()
+            .onClick(() => {
+              this.plugin.deleteProfile(active.id);
+              void this.plugin.saveSettings().then(() => this.display());
+            })
+        );
     }
   }
 

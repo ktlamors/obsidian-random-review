@@ -18,8 +18,16 @@ Randomly select notes from specified folders with tag and property filtering, br
 - **📂 Folder Exclusion** — Exclude specific sub-folders from extraction
 - **👁 Answer Toggle** — Expand/collapse folded callouts (`> [!NOTE]-`) with one click
 - **✏️ Edit While Reviewing** — Open notes in a split pane for editing, auto-refresh on save
-- **💾 Configuration Profiles** — Auto-save and restore settings per target folder
+- **💾 Configuration Profiles** — Named profiles; a folder can have multiple rule sets, switch profiles to switch rules
 - **🖱️ Three Launch Methods** — Command palette / Ribbon icon / Folder context menu
+
+### 1.1.5
+
+**New**: Profiles are now named — a folder can hold multiple rule sets (e.g. "Math - single choice", "Math - mistakes"); switching a profile switches its folder and rules. Edits auto-save to the active profile, with create / rename / delete / save-as-new.
+
+### 1.1.4
+
+**Fixed**: On Android, some notes synced from desktop carried absolute device-prefixed paths, breaking folder filtering and reporting "no matching notes".
 
 ### 1.1.3
 
@@ -54,13 +62,14 @@ Add repository: `ktlamors/obsidian-random-review`
 Settings → Community Plugins → Random Review → Options:
 
 - **Target Folder**: Select the folder containing notes to review
+- **Profiles**: Create, select, rename, or delete profiles; a folder can hold multiple rule sets (e.g. "Math - single choice", "Math - mistakes"), and edits auto-save to the active profile
 - **Exclude Folders**: Sub-folders to skip
 - **Include/Exclude Tags**: Filter by tags (one per line)
 - **Property Filters**: Filter into AND condition groups; groups are alternatives (OR), each with its own pick count; each condition supports equals / contains / not equals
 - **Pick Count**: Default number of notes when no property filters are set
 - **Answer Default Collapsed**: Initial fold state for callouts
 
-Configuration is **auto-saved per folder** — switching target folders preserves settings for each one.
+Configuration is organized into **profiles**: a profile bundles a folder plus its rules. Edits auto-save to the active profile, and you can "Save as new profile" to duplicate a rule set.
 
 ### 2. Launch
 

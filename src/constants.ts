@@ -35,6 +35,13 @@ export interface FolderProfile {
   randomOrder: boolean;
 }
 
+/** 命名档案：一份带名字和文件夹的筛选规则快照 */
+export interface NamedProfile extends FolderProfile {
+  id: string;
+  name: string;
+  folderPath: string;
+}
+
 export interface RandomReviewSettings {
   // 当前选中的文件夹
   folderPath: string;
@@ -54,11 +61,14 @@ export interface RandomReviewSettings {
   answerDefaultCollapsed: boolean;
   showNavigationBar: boolean;
 
-  // 按文件夹保存的配置档案：key = 文件夹路径
-  profiles: Record<string, FolderProfile>;
+  // 当前激活的命名档案 id（自动保存目标）
+  activeProfileId: string | null;
+
+  // 所有命名档案
+  profiles: NamedProfile[];
 }
 
-/** 新建文件夹时的默认筛选配置 */
+/** 新建档案时的默认筛选字段 */
 export const DEFAULT_PROFILE: FolderProfile = {
   excludeFolders: [],
   includeTags: [],
@@ -68,8 +78,7 @@ export const DEFAULT_PROFILE: FolderProfile = {
   randomOrder: true,
 };
 
-export const DEFAULT_SETTINGS: RandomReviewSettings = {
-  folderPath: "",
+export const DEFAULT_SETTINGS: RandomReviewSettings = {  folderPath: "",
   language: "zh",
   excludeFolders: [],
   includeTags: [],
@@ -79,5 +88,6 @@ export const DEFAULT_SETTINGS: RandomReviewSettings = {
   randomOrder: true,
   answerDefaultCollapsed: true,
   showNavigationBar: true,
-  profiles: {},
+  activeProfileId: null,
+  profiles: [],
 };

@@ -10,6 +10,8 @@ import {
   RandomReviewSettings,
   PropertyGroup,
   LegacyPropertyFilter,
+  FolderProfile,
+  NamedProfile,
   DEFAULT_SETTINGS,
 } from "./constants";
 import { RandomReviewSettingTab } from "./settings";
@@ -23,12 +25,14 @@ interface SettingManager {
   openTabById(id: string): Promise<void>;
 }
 
-type LegacyStoredData = Partial<RandomReviewSettings> & {
+type LegacyProfileRecord = Record<
+  string,
+  FolderProfile & { propertyFilters?: LegacyPropertyFilter[] }
+>;
+
+type LegacyStoredData = Partial<Omit<RandomReviewSettings, "profiles">> & {
   propertyFilters?: LegacyPropertyFilter[];
-  profiles?: Record<
-    string,
-    RandomReviewSettings["profiles"][string] & { propertyFilters?: LegacyPropertyFilter[] }
-  >;
+  profiles?: LegacyProfileRecord | NamedProfile[];
 };
 
 /** 把旧版扁平属性筛选（v≤1.1.2）迁移为条件组：每个旧条件单独成组，组间仍为 OR */
@@ -139,26 +143,128 @@ export default class RandomReviewPlugin extends Plugin {
     const raw = (await this.loadData()) as LegacyStoredData | null;
     const data = raw ?? {};
 
-    // 迁移旧版存档：顶层与每个文件夹档案的扁平 propertyFilters → 条件组
+    // 迁移旧版存档：顶层扁平 propertyFilters → 条件组
     migrateLegacyPropertyFilters(data);
-    const profiles = data.profiles;
-    if (profiles) {
-      for (const path of Object.keys(profiles)) {
-        migrateLegacyPropertyFilters(profiles[path]);
-      }
-    }
+    // 迁移旧版按文件夹键的档案 → 命名档案数组
+    data.profiles = this.migrateProfiles(data.profiles);
 
     this.settings = Object.assign({}, DEFAULT_SETTINGS, data);
 
-    if (!this.settings.profiles) {
-      this.settings.profiles = {};
+    if (!Array.isArray(this.settings.profiles)) {
+      this.settings.profiles = [];
+    }
+    if (this.settings.activeProfileId == null) {
+      this.settings.activeProfileId = null;
     }
 
     await this.saveSettings();
   }
 
   async saveSettings(): Promise<void> {
+    this.syncWorkingToActiveProfile();
     await this.saveData(this.settings);
+  }
+
+  // ──────────────────────────────────────────
+  // 命名档案
+  // ──────────────────────────────────────────
+
+  getActiveProfile(): NamedProfile | null {
+    return (
+      this.settings.profiles.find((p) => p.id === this.settings.activeProfileId) ??
+      null
+    );
+  }
+
+  /** 把当前工作区字段写回激活档案（自动保存） */
+  private syncWorkingToActiveProfile(): void {
+    const active = this.getActiveProfile();
+    if (!active) return;
+    active.folderPath = this.settings.folderPath;
+    active.excludeFolders = [...this.settings.excludeFolders];
+    active.includeTags = [...this.settings.includeTags];
+    active.excludeTags = [...this.settings.excludeTags];
+    active.propertyGroups = this.settings.propertyGroups.map((g) => ({
+      count: g.count,
+      conditions: g.conditions.map((c) => ({ ...c })),
+    }));
+    active.pickCount = this.settings.pickCount;
+    active.randomOrder = this.settings.randomOrder;
+  }
+
+  /** 把某档案的字段载入工作区，并设为激活 */
+  applyProfile(profile: NamedProfile): void {
+    this.settings.folderPath = profile.folderPath;
+    this.settings.excludeFolders = [...profile.excludeFolders];
+    this.settings.includeTags = [...profile.includeTags];
+    this.settings.excludeTags = [...profile.excludeTags];
+    this.settings.propertyGroups = profile.propertyGroups.map((g) => ({
+      count: g.count,
+      conditions: g.conditions.map((c) => ({ ...c })),
+    }));
+    this.settings.pickCount = profile.pickCount;
+    this.settings.randomOrder = profile.randomOrder;
+    this.settings.activeProfileId = profile.id;
+  }
+
+  /** 用当前工作区字段另存为一个新档案，并设为激活 */
+  createProfile(name: string): NamedProfile {
+    const profile: NamedProfile = {
+      id: this.generateId(),
+      name,
+      folderPath: this.settings.folderPath,
+      excludeFolders: [...this.settings.excludeFolders],
+      includeTags: [...this.settings.includeTags],
+      excludeTags: [...this.settings.excludeTags],
+      propertyGroups: this.settings.propertyGroups.map((g) => ({
+        count: g.count,
+        conditions: g.conditions.map((c) => ({ ...c })),
+      })),
+      pickCount: this.settings.pickCount,
+      randomOrder: this.settings.randomOrder,
+    };
+    this.settings.profiles.push(profile);
+    this.settings.activeProfileId = profile.id;
+    return profile;
+  }
+
+  deleteProfile(id: string): void {
+    this.settings.profiles = this.settings.profiles.filter((p) => p.id !== id);
+    if (this.settings.activeProfileId === id) {
+      this.settings.activeProfileId = null;
+    }
+  }
+
+  private generateId(): string {
+    return (
+      Date.now().toString(36) + Math.random().toString(36).slice(2, 8)
+    );
+  }
+
+  /** 旧版 profiles 是 Record<folder, FolderProfile>，转成命名档案数组 */
+  private migrateProfiles(
+    raw: LegacyProfileRecord | NamedProfile[] | undefined
+  ): NamedProfile[] {
+    if (Array.isArray(raw)) return raw;
+    const result: NamedProfile[] = [];
+    if (raw && typeof raw === "object") {
+      for (const folderPath of Object.keys(raw)) {
+        const p = raw[folderPath];
+        migrateLegacyPropertyFilters(p);
+        result.push({
+          id: this.generateId(),
+          name: folderPath.split("/").pop() || folderPath,
+          folderPath,
+          excludeFolders: p.excludeFolders ?? [],
+          includeTags: p.includeTags ?? [],
+          excludeTags: p.excludeTags ?? [],
+          propertyGroups: p.propertyGroups ?? [],
+          pickCount: p.pickCount ?? 10,
+          randomOrder: p.randomOrder ?? true,
+        });
+      }
+    }
+    return result;
   }
 
   async startReview(): Promise<void> {
