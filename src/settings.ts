@@ -360,7 +360,7 @@ export class RandomReviewSettingTab extends PluginSettingTab {
           void (async () => {
             const p = s.profiles.find((x) => x.id === id);
             if (!p) {
-              s.activeProfileId = null;
+              this.plugin.clearActiveProfile();
               await this.plugin.saveSettings();
               this.display();
               return;

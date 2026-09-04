@@ -137,7 +137,11 @@ export default class RandomReviewPlugin extends Plugin {
     );
   }
 
-  onunload(): void {}
+  onunload(): void {
+    // 退出前把当前工作区写回激活档案（best-effort 持久化）
+    this.syncWorkingToActiveProfile();
+    void this.saveData(this.settings);
+  }
 
   async loadSettings(): Promise<void> {
     const raw = (await this.loadData()) as LegacyStoredData | null;
@@ -161,7 +165,6 @@ export default class RandomReviewPlugin extends Plugin {
   }
 
   async saveSettings(): Promise<void> {
-    this.syncWorkingToActiveProfile();
     await this.saveData(this.settings);
   }
 
@@ -192,8 +195,9 @@ export default class RandomReviewPlugin extends Plugin {
     active.randomOrder = this.settings.randomOrder;
   }
 
-  /** 把某档案的字段载入工作区，并设为激活 */
+  /** 切换到某档案：先把当前工作区写回原档案，再载入新档案并设为激活 */
   applyProfile(profile: NamedProfile): void {
+    this.syncWorkingToActiveProfile();
     this.settings.folderPath = profile.folderPath;
     this.settings.excludeFolders = [...profile.excludeFolders];
     this.settings.includeTags = [...profile.includeTags];
@@ -205,6 +209,12 @@ export default class RandomReviewPlugin extends Plugin {
     this.settings.pickCount = profile.pickCount;
     this.settings.randomOrder = profile.randomOrder;
     this.settings.activeProfileId = profile.id;
+  }
+
+  /** 取消选中档案：先把当前工作区写回原档案，再清空选中 */
+  clearActiveProfile(): void {
+    this.syncWorkingToActiveProfile();
+    this.settings.activeProfileId = null;
   }
 
   /** 用当前工作区字段另存为一个新档案，并设为激活 */

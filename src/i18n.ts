@@ -22,6 +22,10 @@ const zh = {
   updateLogTitle: "更新日志",
   updateLogItems: [
     {
+      version: "1.1.6",
+      text: "修复「另存为新档案」会覆盖原档案的问题：编辑只改草稿，切换档案时才写回，另存为不影响原档案。",
+    },
+    {
       version: "1.1.5",
       text: "配置档案改为「命名档案」：同一文件夹可保存多套抽取规则，切换档案即切换文件夹与规则；改动自动保存，支持新建/重命名/删除/另存为新档案。",
     },
@@ -126,6 +130,10 @@ const en = {
   ],
   updateLogTitle: "Changelog",
   updateLogItems: [
+    {
+      version: "1.1.6",
+      text: "Fixed \"Save as new profile\" overwriting the original: edits only touch the working draft and are committed when switching, so save-as-new leaves the original unchanged.",
+    },
     {
       version: "1.1.5",
       text: "Profiles are now named: a folder can hold multiple rule sets; switching a profile switches its folder and rules. Edits auto-save, with create / rename / delete / save-as-new.",

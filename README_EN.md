@@ -21,6 +21,10 @@ Randomly select notes from specified folders with tag and property filtering, br
 - **💾 Configuration Profiles** — Named profiles; a folder can have multiple rule sets, switch profiles to switch rules
 - **🖱️ Three Launch Methods** — Command palette / Ribbon icon / Folder context menu
 
+### 1.1.6
+
+**Fixed**: "Save as new profile" no longer overwrites the original profile — edits now only modify the working draft, which is written back to the active profile when you switch; save-as-new leaves the original untouched.
+
 ### 1.1.5
 
 **New**: Profiles are now named — a folder can hold multiple rule sets (e.g. "Math - single choice", "Math - mistakes"); switching a profile switches its folder and rules. Edits auto-save to the active profile, with create / rename / delete / save-as-new.
