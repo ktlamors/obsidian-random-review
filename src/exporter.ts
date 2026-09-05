@@ -6,9 +6,9 @@ import {
   TextRun,
   Header,
   Footer,
-  HeadingLevel,
   AlignmentType,
   PageNumber,
+  LineRuleType,
 } from "docx";
 
 // ──────────────────────────────────────────────
@@ -562,6 +562,11 @@ function buildText(opts: ExportOptions): string {
 // DOCX 构建
 // ──────────────────────────────────────────────
 
+/** 正文统一样式：宋体五号（10.5pt = 21 half-points）、1.5 倍行距 */
+const DOCX_FONT = { name: "宋体", eastAsia: "宋体" };
+const DOCX_SIZE = 21;
+const DOCX_SPACING = { line: 360, lineRule: LineRuleType.AUTO };
+
 type InlineToken = Token;
 
 function inlineToRuns(tokens: InlineToken[]): TextRun[] {
@@ -571,7 +576,9 @@ function inlineToRuns(tokens: InlineToken[]): TextRun[] {
       switch (t.type) {
         case "text":
         case "escape":
-          runs.push(new TextRun({ text: (t as any).text, bold, italics }));
+          runs.push(
+            new TextRun({ text: (t as any).text, bold, italics, font: DOCX_FONT, size: DOCX_SIZE })
+          );
           break;
         case "strong":
           walk((t as any).tokens ?? [], true, italics);
@@ -583,13 +590,15 @@ function inlineToRuns(tokens: InlineToken[]): TextRun[] {
           runs.push(...inlineToRuns((t as any).tokens ?? []));
           break;
         case "codespan":
-          runs.push(new TextRun({ text: (t as any).text, font: { name: "Consolas" } }));
+          runs.push(
+            new TextRun({ text: (t as any).text, font: DOCX_FONT, size: DOCX_SIZE })
+          );
           break;
         case "link":
           walk((t as any).tokens ?? [], bold, italics);
           break;
         case "br":
-          runs.push(new TextRun({ text: "\n" }));
+          runs.push(new TextRun({ text: "\n", font: DOCX_FONT, size: DOCX_SIZE }));
           break;
         default:
           break;
@@ -600,18 +609,17 @@ function inlineToRuns(tokens: InlineToken[]): TextRun[] {
   return runs;
 }
 
-function docxParagraphsForMarkdown(md: string, includeAnswers = true): Paragraph[] {
+function docxParagraphsForMarkdown(md: string, includeAnswers = true, questionNumber?: number): Paragraph[] {
   const segments = filterAnswers(extractSegments(md), includeAnswers);
   const out: Paragraph[] = [];
+  let headingSeen = false;
   for (const seg of segments) {
     if (seg.type === "callout") {
       const title = seg.title || (seg.calloutType ?? "note");
       out.push(
         new Paragraph({
-          children: [
-            new TextRun({ text: `📌 ${title}`, bold: true, color: "5B6CFF" }),
-          ],
-          spacing: { before: 200, after: 60 },
+          children: [new TextRun({ text: title, font: DOCX_FONT, size: DOCX_SIZE })],
+          spacing: DOCX_SPACING,
         })
       );
       out.push(...docxParagraphsForMarkdown(seg.text, includeAnswers));
@@ -621,19 +629,17 @@ function docxParagraphsForMarkdown(md: string, includeAnswers = true): Paragraph
     for (const token of tokens) {
       switch (token.type) {
         case "heading": {
-          const depth = Math.min((token as any).depth, 6) as 1 | 2 | 3 | 4 | 5 | 6;
-          const levels = [
-            HeadingLevel.HEADING_1,
-            HeadingLevel.HEADING_2,
-            HeadingLevel.HEADING_3,
-            HeadingLevel.HEADING_4,
-            HeadingLevel.HEADING_5,
-            HeadingLevel.HEADING_6,
-          ];
+          // 题目标题统一宋体五号黑色，第一个标题加题目编号
+          const prefix = questionNumber != null && !headingSeen ? `${questionNumber}. ` : "";
+          headingSeen = true;
+          const runs = inlineToRuns((token as any).tokens ?? []);
+          if (prefix) {
+            runs.unshift(new TextRun({ text: prefix, font: DOCX_FONT, size: DOCX_SIZE }));
+          }
           out.push(
             new Paragraph({
-              heading: levels[depth - 1],
-              children: inlineToRuns((token as any).tokens ?? []),
+              children: runs,
+              spacing: DOCX_SPACING,
             })
           );
           break;
@@ -642,26 +648,24 @@ function docxParagraphsForMarkdown(md: string, includeAnswers = true): Paragraph
           out.push(
             new Paragraph({
               children: inlineToRuns((token as any).tokens ?? []),
+              spacing: DOCX_SPACING,
             })
           );
           break;
         case "list": {
           const items = (token as any).items ?? [];
-          items.forEach((item: any, ii: number) => {
-            const ordered = (token as any).ordered;
-            const prefix = ordered ? `${ii + 1}. ` : "• ";
+          items.forEach((item: any) => {
             const itemTokens = item.tokens ?? [];
             const firstPara = itemTokens.find((x: any) => x.type === "paragraph" || x.type === "text");
             const text = firstPara ? (firstPara.text ?? "") : "";
+            // 选项正常排列，不加无序列表符号
             out.push(
               new Paragraph({
-                children: [
-                  new TextRun({ text: prefix }),
-                  ...(firstPara && firstPara.tokens
+                children:
+                  firstPara && firstPara.tokens
                     ? inlineToRuns(firstPara.tokens)
-                    : [new TextRun({ text })]),
-                ],
-                bullet: ordered ? undefined : { level: 0 },
+                    : [new TextRun({ text, font: DOCX_FONT, size: DOCX_SIZE })],
+                spacing: DOCX_SPACING,
               })
             );
           });
@@ -670,10 +674,8 @@ function docxParagraphsForMarkdown(md: string, includeAnswers = true): Paragraph
         case "code":
           out.push(
             new Paragraph({
-              children: [
-                new TextRun({ text: (token as any).text, font: { name: "Consolas" } }),
-              ],
-              spacing: { before: 60, after: 60 },
+              children: [new TextRun({ text: (token as any).text, font: DOCX_FONT, size: DOCX_SIZE })],
+              spacing: DOCX_SPACING,
             })
           );
           break;
@@ -681,12 +683,12 @@ function docxParagraphsForMarkdown(md: string, includeAnswers = true): Paragraph
           out.push(
             new Paragraph({
               children: inlineToRuns((token as any).tokens ?? []),
-              style: "IntenseQuote",
+              spacing: DOCX_SPACING,
             })
           );
           break;
         case "hr":
-          out.push(new Paragraph({ text: "" }));
+          out.push(new Paragraph({ text: "", spacing: DOCX_SPACING }));
           break;
         case "space":
         default:
@@ -704,32 +706,40 @@ async function buildDocx(opts: ExportOptions): Promise<ArrayBuffer> {
   if (opts.includeRules && opts.rulesSummary) {
     children.push(
       new Paragraph({
-        children: [new TextRun({ text: opts.rulesSummary, italics: true, color: "6B7280" })],
-        spacing: { after: 200 },
+        children: [new TextRun({ text: opts.rulesSummary, font: DOCX_FONT, size: DOCX_SIZE })],
+        spacing: DOCX_SPACING,
       })
     );
   }
 
-  notes.forEach((note) => {
+  notes.forEach((note, noteIndex) => {
     const { properties, body } = parseFrontmatter(note.content);
     if (includeNoteTitle) {
+      // 文件名不编号，宋体五号黑色
       children.push(
         new Paragraph({
-          heading: HeadingLevel.HEADING_1,
-          children: [new TextRun({ text: note.title })],
-          spacing: { before: 240, after: 120 },
+          children: [
+            new TextRun({
+              text: note.title,
+              font: DOCX_FONT,
+              size: DOCX_SIZE,
+            }),
+          ],
+          spacing: DOCX_SPACING,
         })
       );
     }
     if (includeProperties && properties) {
       children.push(
         new Paragraph({
-          children: [new TextRun({ text: formatPropertiesLine(properties), color: "9CA3AF", size: 18 })],
-          spacing: { after: 80 },
+          children: [
+            new TextRun({ text: formatPropertiesLine(properties), font: DOCX_FONT, size: DOCX_SIZE }),
+          ],
+          spacing: DOCX_SPACING,
         })
       );
     }
-    children.push(...docxParagraphsForMarkdown(body, opts.includeAnswers));
+    children.push(...docxParagraphsForMarkdown(body, opts.includeAnswers, noteIndex + 1));
   });
 
   // 插件信息始终包含（正文末尾 + 页眉页脚）

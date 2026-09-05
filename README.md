@@ -2,7 +2,7 @@
 
 [![English](https://img.shields.io/badge/English-README_EN-blue)](./README_EN.md)  [![Obsidian](https://img.shields.io/badge/Obsidian-Plugin-purple.svg)](https://obsidian.md)  [![Release](https://img.shields.io/github/v/release/ktlamors/obsidian-random-review)](https://github.com/ktlamors/obsidian-random-review/releases)  [![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)  [![Last Commit](https://img.shields.io/github/last-commit/ktlamors/obsidian-random-review)](https://github.com/ktlamors/obsidian-random-review)
 
-从指定文件夹中按规则随机抽取笔记，全屏逐篇浏览复习，支持答案折叠/展开。适用于闪卡自测、随机回顾、模拟抽题等场景。
+从指定文件夹中按规则随机抽取笔记，全屏逐篇浏览复习，支持答案折叠/展开，可将抽取结果导出为 HTML、Markdown、纯文本或 Word。适用于闪卡自测、随机回顾、模拟抽题等场景。
 
 ## 功能
 
@@ -13,7 +13,12 @@
 - **👁 答案切换** — 一键展开/折叠笔记中的折叠 Callout（`> [!NOTE]-` 语法）
 - **✏️ 边看边改** — 复习中可在右侧分屏打开笔记编辑，保存后自动刷新
 - **💾 配置档案** — 支持命名档案，同一文件夹可保存多套抽取规则，切换档案即切换规则
+- **📤 结果导出** — 导出为 HTML（交互式）、Markdown、纯文本、Word(.docx)，可选导出答案、规则摘要、标题、属性
 - **🖱️ 三种启动方式** — 命令面板 / Ribbon 图标 / 文件夹右键菜单
+
+### 1.2.0
+
+**新增**：导出功能——支持 HTML（交互式，可翻题、显示/隐藏答案）、Markdown、纯文本、Word(.docx) 四种格式；可选导出答案、抽取规则摘要、笔记标题、笔记属性。
 
 ### 1.1.6
 
@@ -85,6 +90,7 @@
 | 上一题        | 点击「← 上一题」或按`←`             |
 | 显示/隐藏答案 | 点击按钮或按`A`                       |
 | 编辑原笔记    | 点击「编辑原笔记」，右侧分屏编辑        |
+| 导出结果      | 点击「导出」，选择格式与范围后导出      |
 | 退出          | 点击`✕` 或按 `Esc`                 |
 
 ### 4. 笔记格式

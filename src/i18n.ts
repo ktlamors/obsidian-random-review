@@ -12,15 +12,20 @@ const zh = {
   languageSetting: "语言【Language】",
   languageDesc: "设置界面显示语言",
   pluginIntroTitle: "插件介绍",
-  pluginIntro: "从指定文件夹随机抽取笔记，支持标签和属性筛选，在全屏视图中逐篇浏览，用折叠 callout 显示/隐藏答案。适合闪卡复习、随机浏览和测验模拟。",
+  pluginIntro: "从指定文件夹随机抽取笔记，支持标签和属性筛选，在全屏视图中逐篇浏览，用折叠 callout 显示/隐藏答案；可将抽取结果导出为 HTML、Markdown、纯文本或 Word 文档。适合闪卡复习、随机浏览和测验模拟。",
   usageTitle: "使用方法",
   usageItems: [
     "在「抽取控制」中选择目标文件夹，并按需设置标签、排除文件夹、属性（属性可组成条件组，组内条件需全部满足）等筛选",
     "通过命令面板、Ribbon 图标或右键文件夹启动复习",
     "用 ← → 或空格切换笔记，按 A 显示/隐藏答案，Esc 退出",
+    "复习时点击「导出」，选择格式（HTML/Markdown/TXT/Word）与范围后导出结果",
   ],
   updateLogTitle: "更新日志",
   updateLogItems: [
+    {
+      version: "1.2.0",
+      text: "新增导出功能：支持 HTML（交互式，可翻题、显示/隐藏答案）、Markdown、纯文本、Word(.docx) 四种格式；可选导出答案、抽取规则摘要、笔记标题、笔记属性。",
+    },
     {
       version: "1.1.6",
       text: "修复「另存为新档案」会覆盖原档案的问题：编辑只改草稿，切换档案时才写回，另存为不影响原档案。",
@@ -153,15 +158,20 @@ const en = {
   languageSetting: "Language",
   languageDesc: "Set the display language of the interface",
   pluginIntroTitle: "About",
-  pluginIntro: "Randomly pick notes from a folder with tag and property filtering, browse them one by one in a fullscreen view, and show/hide answers via folded callouts. Ideal for flashcard review, random browsing, and quiz simulation.",
+  pluginIntro: "Randomly pick notes from a folder with tag and property filtering, browse them one by one in a fullscreen view, and show/hide answers via folded callouts. Export results to HTML, Markdown, plain text, or Word. Ideal for flashcard review, random browsing, and quiz simulation.",
   usageTitle: "Usage",
   usageItems: [
     "In \"Extraction Control\", pick a target folder and configure tags, excluded folders, and property filters (properties can be grouped into AND condition groups)",
     "Launch the review via the command palette, the ribbon icon, or the folder context menu",
     "Use ← → or Space to switch notes, press A to show/hide the answer, and Esc to exit",
+    "Click \"Export\" while reviewing, then choose a format (HTML/Markdown/TXT/Word) and scope",
   ],
   updateLogTitle: "Changelog",
   updateLogItems: [
+    {
+      version: "1.2.0",
+      text: "Added export: HTML (interactive, with navigation and show/hide answers), Markdown, plain text, and Word (.docx); optional answers, rules summary, note titles, and note properties.",
+    },
     {
       version: "1.1.6",
       text: "Fixed \"Save as new profile\" overwriting the original: edits only touch the working draft and are committed when switching, so save-as-new leaves the original unchanged.",

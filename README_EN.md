@@ -2,7 +2,7 @@
 
 [![简体中文](https://img.shields.io/badge/简体中文-README-blue)](./README.md)  [![Obsidian](https://img.shields.io/badge/Obsidian-Plugin-purple.svg)](https://obsidian.md)  [![Release](https://img.shields.io/github/v/release/ktlamors/obsidian-random-review)](https://github.com/ktlamors/obsidian-random-review/releases)  [![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)  [![Last Commit](https://img.shields.io/github/last-commit/ktlamors/obsidian-random-review)](https://github.com/ktlamors/obsidian-random-review)
 
-Randomly select notes from specified folders with tag and property filtering, browse them fullscreen with answer toggle. Ideal for flashcard review, random browsing, and quiz simulation.
+Randomly select notes from specified folders with tag and property filtering, browse them fullscreen with answer toggle, and export results to HTML, Markdown, plain text, or Word. Ideal for flashcard review, random browsing, and quiz simulation.
 
 ## Features
 
@@ -13,7 +13,12 @@ Randomly select notes from specified folders with tag and property filtering, br
 - **👁 Answer Toggle** — Expand/collapse folded callouts (`> [!NOTE]-`) with one click
 - **✏️ Edit While Reviewing** — Open notes in a split pane for editing, auto-refresh on save
 - **💾 Configuration Profiles** — Named profiles; a folder can have multiple rule sets, switch profiles to switch rules
+- **📤 Export** — Export to HTML (interactive), Markdown, plain text, or Word (.docx); optional answers, rules summary, titles, and properties
 - **🖱️ Three Launch Methods** — Command palette / Ribbon icon / Folder context menu
+
+### 1.2.0
+
+**New**: Export — HTML (interactive, with navigation and show/hide answers), Markdown, plain text, and Word (.docx); optional answers, rules summary, note titles, and note properties.
 
 ### 1.1.6
 
@@ -85,6 +90,7 @@ Three ways:
 | Previous           | Click「← 上一题」or press`←`             |
 | Show/Hide Answer   | Click toggle button or press`A`            |
 | Edit Original Note | Click「编辑原笔记」to open split pane        |
+| Export             | Click「导出」, choose a format and scope     |
 | Exit               | Click`✕` or press `Esc`                 |
 
 ### 4. Note Format
