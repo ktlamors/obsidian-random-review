@@ -1,4 +1,5 @@
 import { marked, Token } from "marked";
+import type { MarkedToken } from "marked";
 import {
   Document,
   Packer,
@@ -567,35 +568,34 @@ const DOCX_FONT = { name: "宋体", eastAsia: "宋体" };
 const DOCX_SIZE = 21;
 const DOCX_SPACING = { line: 360, lineRule: LineRuleType.AUTO };
 
-type InlineToken = Token;
-
-function inlineToRuns(tokens: InlineToken[]): TextRun[] {
+function inlineToRuns(tokens: Token[]): TextRun[] {
   const runs: TextRun[] = [];
-  const walk = (toks: InlineToken[], bold: boolean, italics: boolean): void => {
-    for (const t of toks) {
+  const walk = (toks: Token[], bold: boolean, italics: boolean): void => {
+    for (const raw of toks) {
+      const t = raw as MarkedToken;
       switch (t.type) {
         case "text":
         case "escape":
           runs.push(
-            new TextRun({ text: (t as any).text, bold, italics, font: DOCX_FONT, size: DOCX_SIZE })
+            new TextRun({ text: t.text, bold, italics, font: DOCX_FONT, size: DOCX_SIZE })
           );
           break;
         case "strong":
-          walk((t as any).tokens ?? [], true, italics);
+          walk(t.tokens, true, italics);
           break;
         case "em":
-          walk((t as any).tokens ?? [], bold, true);
+          walk(t.tokens, bold, true);
           break;
         case "del":
-          runs.push(...inlineToRuns((t as any).tokens ?? []));
+          runs.push(...inlineToRuns(t.tokens));
           break;
         case "codespan":
           runs.push(
-            new TextRun({ text: (t as any).text, font: DOCX_FONT, size: DOCX_SIZE })
+            new TextRun({ text: t.text, font: DOCX_FONT, size: DOCX_SIZE })
           );
           break;
         case "link":
-          walk((t as any).tokens ?? [], bold, italics);
+          walk(t.tokens, bold, italics);
           break;
         case "br":
           runs.push(new TextRun({ text: "\n", font: DOCX_FONT, size: DOCX_SIZE }));
@@ -625,14 +625,14 @@ function docxParagraphsForMarkdown(md: string, includeAnswers = true, questionNu
       out.push(...docxParagraphsForMarkdown(seg.text, includeAnswers));
       continue;
     }
-    const tokens = marked.lexer(seg.text);
+    const tokens = marked.lexer(seg.text) as MarkedToken[];
     for (const token of tokens) {
       switch (token.type) {
         case "heading": {
           // 题目标题统一宋体五号黑色，第一个标题加题目编号
           const prefix = questionNumber != null && !headingSeen ? `${questionNumber}. ` : "";
           headingSeen = true;
-          const runs = inlineToRuns((token as any).tokens ?? []);
+          const runs = inlineToRuns(token.tokens);
           if (prefix) {
             runs.unshift(new TextRun({ text: prefix, font: DOCX_FONT, size: DOCX_SIZE }));
           }
@@ -647,34 +647,37 @@ function docxParagraphsForMarkdown(md: string, includeAnswers = true, questionNu
         case "paragraph":
           out.push(
             new Paragraph({
-              children: inlineToRuns((token as any).tokens ?? []),
+              children: inlineToRuns(token.tokens),
               spacing: DOCX_SPACING,
             })
           );
           break;
         case "list": {
-          const items = (token as any).items ?? [];
-          items.forEach((item: any) => {
-            const itemTokens = item.tokens ?? [];
-            const firstPara = itemTokens.find((x: any) => x.type === "paragraph" || x.type === "text");
-            const text = firstPara ? (firstPara.text ?? "") : "";
+          const items = token.items;
+          for (const item of items) {
+            const itemTokens: MarkedToken[] = item.tokens as MarkedToken[];
+            const firstPara = itemTokens.find(
+              (x) => x.type === "paragraph" || x.type === "text"
+            );
+            const runs = firstPara && firstPara.type === "paragraph"
+              ? inlineToRuns(firstPara.tokens)
+              : firstPara && firstPara.type === "text"
+                ? [new TextRun({ text: firstPara.text, font: DOCX_FONT, size: DOCX_SIZE })]
+                : [new TextRun({ text: item.text, font: DOCX_FONT, size: DOCX_SIZE })];
             // 选项正常排列，不加无序列表符号
             out.push(
               new Paragraph({
-                children:
-                  firstPara && firstPara.tokens
-                    ? inlineToRuns(firstPara.tokens)
-                    : [new TextRun({ text, font: DOCX_FONT, size: DOCX_SIZE })],
+                children: runs,
                 spacing: DOCX_SPACING,
               })
             );
-          });
+          }
           break;
         }
         case "code":
           out.push(
             new Paragraph({
-              children: [new TextRun({ text: (token as any).text, font: DOCX_FONT, size: DOCX_SIZE })],
+              children: [new TextRun({ text: token.text, font: DOCX_FONT, size: DOCX_SIZE })],
               spacing: DOCX_SPACING,
             })
           );
@@ -682,7 +685,7 @@ function docxParagraphsForMarkdown(md: string, includeAnswers = true, questionNu
         case "blockquote":
           out.push(
             new Paragraph({
-              children: inlineToRuns((token as any).tokens ?? []),
+              children: inlineToRuns(token.tokens),
               spacing: DOCX_SPACING,
             })
           );

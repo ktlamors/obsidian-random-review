@@ -354,7 +354,9 @@ export class RandomReviewSettingTab extends PluginSettingTab {
       .setName(t.profileSelect)
       .addDropdown((dd) => {
         dd.addOption("", t.selectProfile);
-        s.profiles.forEach((p) => dd.addOption(p.id, p.name));
+        s.profiles.forEach((p) => {
+          dd.addOption(p.id, p.name);
+        });
         dd.setValue(s.activeProfileId ?? "");
         dd.onChange((id) => {
           void (async () => {
@@ -406,7 +408,7 @@ export class RandomReviewSettingTab extends PluginSettingTab {
         .addButton((btn) =>
           btn
             .setButtonText(t.profileDelete)
-            .setWarning()
+            .setDestructive()
             .onClick(() => {
               this.plugin.deleteProfile(active.id);
               void this.plugin.saveSettings().then(() => this.display());

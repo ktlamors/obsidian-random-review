@@ -213,16 +213,14 @@ export class ExportModal extends Modal {
   }
 
   private download(result: { filename: string; mimeType: string; content: string | ArrayBuffer; isBinary: boolean }): void {
-    const blob = result.isBinary
-      ? new Blob([result.content as ArrayBuffer], { type: result.mimeType })
-      : new Blob([result.content as string], { type: result.mimeType });
+    const blob = new Blob([result.content], { type: result.mimeType });
     const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
+    const a = document.body.createEl("a");
     a.href = url;
     a.download = result.filename;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
-    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    window.setTimeout(() => URL.revokeObjectURL(url), 1000);
   }
 }
