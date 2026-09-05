@@ -23,6 +23,10 @@ const zh = {
   updateLogTitle: "更新日志",
   updateLogItems: [
     {
+      version: "1.2.1",
+      text: "修复社区评审问题：移除依赖库中的动态脚本创建、规范类型与 API 用法，新增 release 构建签名。",
+    },
+    {
       version: "1.2.0",
       text: "新增导出功能：支持 HTML（交互式，可翻题、显示/隐藏答案）、Markdown、纯文本、Word(.docx) 四种格式；可选导出答案、抽取规则摘要、笔记标题、笔记属性。",
     },
@@ -168,6 +172,10 @@ const en = {
   ],
   updateLogTitle: "Changelog",
   updateLogItems: [
+    {
+      version: "1.2.1",
+      text: "Fixed community review issues: removed dynamic script creation from dependencies, tightened types and API usage, added release build provenance.",
+    },
     {
       version: "1.2.0",
       text: "Added export: HTML (interactive, with navigation and show/hide answers), Markdown, plain text, and Word (.docx); optional answers, rules summary, note titles, and note properties.",

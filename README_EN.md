@@ -16,6 +16,10 @@ Randomly select notes from specified folders with tag and property filtering, br
 - **📤 Export** — Export to HTML (interactive), Markdown, plain text, or Word (.docx); optional answers, rules summary, titles, and properties
 - **🖱️ Three Launch Methods** — Command palette / Ribbon icon / Folder context menu
 
+### 1.2.1
+
+**Fixed**: Resolved community review issues — removed dynamic script creation from dependencies, tightened types and API usage, added release build provenance.
+
 ### 1.2.0
 
 **New**: Export — HTML (interactive, with navigation and show/hide answers), Markdown, plain text, and Word (.docx); optional answers, rules summary, note titles, and note properties.
