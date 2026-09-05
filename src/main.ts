@@ -72,7 +72,7 @@ export default class RandomReviewPlugin extends Plugin {
 
     this.registerView(
       VIEW_TYPE_RANDOM_REVIEW,
-      (leaf: WorkspaceLeaf) => new ReviewView(leaf)
+      (leaf: WorkspaceLeaf) => new ReviewView(leaf, this)
     );
 
     this.registerStartCommand();

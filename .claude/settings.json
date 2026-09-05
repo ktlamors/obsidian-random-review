@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(node -e \"const m=require\\('marked'\\); console.log\\(Object.keys\\(m\\).filter\\(k=>/token/i.test\\(k\\)\\).join\\(','\\)\\);\")",
+      "Bash(echo \"---EXIT $?---\")",
+      "Bash(node -e ' *)"
+    ]
+  }
+}

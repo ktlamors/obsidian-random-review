@@ -8,6 +8,8 @@ import {
 } from "obsidian";
 import { VIEW_TYPE_RANDOM_REVIEW } from "./constants";
 import { getLang, Language } from "./i18n";
+import type RandomReviewPlugin from "./main";
+import { ExportModal } from "./export-modal";
 
 export class ReviewView extends ItemView {
   private queue: TFile[] = [];
@@ -15,6 +17,7 @@ export class ReviewView extends ItemView {
   private answerVisible: boolean = false;
   private boundHandleKeydown = this.handleKeydown.bind(this);
   private boundHandleLinkClick = this.handleLinkClick.bind(this);
+  private plugin: RandomReviewPlugin;
 
   private topBarEl!: HTMLElement;
   private noteContentEl!: HTMLElement;
@@ -26,6 +29,7 @@ export class ReviewView extends ItemView {
   private toggleAnswerBtn!: HTMLButtonElement;
   private exitBtn!: HTMLButtonElement;
   private editBtn!: HTMLButtonElement;
+  private exportBtn!: HTMLButtonElement;
 
   private answerDefaultCollapsed: boolean = true;
   private showNavBar: boolean = true;
@@ -33,8 +37,9 @@ export class ReviewView extends ItemView {
   private isEditing: boolean = false;
   private editingFile: TFile | null = null;
 
-  constructor(leaf: WorkspaceLeaf) {
+  constructor(leaf: WorkspaceLeaf, plugin: RandomReviewPlugin) {
     super(leaf);
+    this.plugin = plugin;
   }
 
   getViewType(): string {
@@ -66,6 +71,14 @@ export class ReviewView extends ItemView {
     });
     this.editBtn.addEventListener("click", () => {
       void this.toggleEditLeaf();
+    });
+
+    this.exportBtn = topRight.createEl("button", {
+      text: "导出",
+      cls: "random-review-edit-btn",
+    });
+    this.exportBtn.addEventListener("click", () => {
+      this.openExportModal();
     });
 
     this.exitBtn = topRight.createEl("button", {
@@ -226,6 +239,7 @@ export class ReviewView extends ItemView {
   private updateUIText(): void {
     const t = getLang(this.language);
     this.editBtn.setText(this.isEditing ? t.closeNote : t.editNote);
+    this.exportBtn.setText(t.exportNote);
     this.prevBtn.setText(t.previous);
     this.nextBtn.setText(t.next);
     this.toggleAnswerBtn.setText(t.showAnswer);
@@ -403,5 +417,14 @@ export class ReviewView extends ItemView {
 
   private closeView(): void {
     this.leaf.detach();
+  }
+
+  private openExportModal(): void {
+    new ExportModal(
+      this.app,
+      this.plugin,
+      this.queue,
+      this.currentIndex
+    ).open();
   }
 }

@@ -1,12 +1,6 @@
 # Random Review — Obsidian Random Note Review Plugin
 
-[![简体中文](https://img.shields.io/badge/简体中文-README-blue)](./README.md)
-
-[![Obsidian](https://img.shields.io/badge/Obsidian-Plugin-purple.svg)](https://obsidian.md)
-[![Release](https://img.shields.io/github/v/release/ktlamors/obsidian-random-review)](https://github.com/ktlamors/obsidian-random-review/releases)
-[![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![GitHub Stars](https://img.shields.io/github/stars/ktlamors/obsidian-random-review)](https://github.com/ktlamors/obsidian-random-review)
-[![Last Commit](https://img.shields.io/github/last-commit/ktlamors/obsidian-random-review)](https://github.com/ktlamors/obsidian-random-review)
+[![简体中文](https://img.shields.io/badge/简体中文-README-blue)](./README.md)  [![Obsidian](https://img.shields.io/badge/Obsidian-Plugin-purple.svg)](https://obsidian.md)  [![Release](https://img.shields.io/github/v/release/ktlamors/obsidian-random-review)](https://github.com/ktlamors/obsidian-random-review/releases)  [![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)  [![Last Commit](https://img.shields.io/github/last-commit/ktlamors/obsidian-random-review)](https://github.com/ktlamors/obsidian-random-review)
 
 Randomly select notes from specified folders with tag and property filtering, browse them fullscreen with answer toggle. Ideal for flashcard review, random browsing, and quiz simulation.
 
@@ -85,13 +79,13 @@ Three ways:
 
 ### 3. Navigation
 
-| Action             | Button / Shortcut                     |
-| ------------------ | ------------------------------------- |
-| Next               | Click「下一题 →」or press `→` / `Space` |
-| Previous           | Click「← 上一题」or press `←`             |
-| Show/Hide Answer   | Click toggle button or press `A`       |
-| Edit Original Note | Click「编辑原笔记」to open split pane   |
-| Exit               | Click `✕` or press `Esc`              |
+| Action             | Button / Shortcut                            |
+| ------------------ | -------------------------------------------- |
+| Next               | Click「下一题 →」or press`→` / `Space` |
+| Previous           | Click「← 上一题」or press`←`             |
+| Show/Hide Answer   | Click toggle button or press`A`            |
+| Edit Original Note | Click「编辑原笔记」to open split pane        |
+| Exit               | Click`✕` or press `Esc`                 |
 
 ### 4. Note Format
 

@@ -1,12 +1,6 @@
 # Random Review — Obsidian 随机复习插件
 
-[![English](https://img.shields.io/badge/English-README_EN-blue)](./README_EN.md)
-
-[![Obsidian](https://img.shields.io/badge/Obsidian-Plugin-purple.svg)](https://obsidian.md)
-[![Release](https://img.shields.io/github/v/release/ktlamors/obsidian-random-review)](https://github.com/ktlamors/obsidian-random-review/releases)
-[![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![GitHub Stars](https://img.shields.io/github/stars/ktlamors/obsidian-random-review)](https://github.com/ktlamors/obsidian-random-review)
-[![Last Commit](https://img.shields.io/github/last-commit/ktlamors/obsidian-random-review)](https://github.com/ktlamors/obsidian-random-review)
+[![English](https://img.shields.io/badge/English-README_EN-blue)](./README_EN.md)  [![Obsidian](https://img.shields.io/badge/Obsidian-Plugin-purple.svg)](https://obsidian.md)  [![Release](https://img.shields.io/github/v/release/ktlamors/obsidian-random-review)](https://github.com/ktlamors/obsidian-random-review/releases)  [![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)  [![Last Commit](https://img.shields.io/github/last-commit/ktlamors/obsidian-random-review)](https://github.com/ktlamors/obsidian-random-review)
 
 从指定文件夹中按规则随机抽取笔记，全屏逐篇浏览复习，支持答案折叠/展开。适用于闪卡自测、随机回顾、模拟抽题等场景。
 
