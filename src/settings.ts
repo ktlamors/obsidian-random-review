@@ -499,7 +499,7 @@ export class RandomReviewSettingTab extends PluginSettingTab {
         .addButton((btn) =>
           btn
             .setButtonText(t.profileDelete)
-            .setWarning()
+            .setDestructive()
             .onClick(() => {
               this.plugin.deleteProfile(active.id);
               void this.plugin.saveSettings().then(() => this.display());
