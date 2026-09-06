@@ -11,6 +11,7 @@ import { getLang, Language } from "./i18n";
 import type RandomReviewPlugin from "./main";
 import { ExportModal } from "./export-modal";
 import { QuizStorage } from "./quiz-storage";
+import { QuizHistoryView, VIEW_TYPE_QUIZ_HISTORY } from "./quiz-history-view";
 
 export class ReviewView extends ItemView {
   private queue: TFile[] = [];
@@ -30,6 +31,7 @@ export class ReviewView extends ItemView {
   private toggleAnswerBtn!: HTMLButtonElement;
   private exitBtn!: HTMLButtonElement;
   private editBtn!: HTMLButtonElement;
+  private historyBtn!: HTMLButtonElement;
   private exportBtn!: HTMLButtonElement;
 
   private answerDefaultCollapsed: boolean = true;
@@ -79,15 +81,23 @@ export class ReviewView extends ItemView {
     const topRight = this.topBarEl.createDiv("random-review-topright");
 
     this.editBtn = topRight.createEl("button", {
-      text: "编辑原笔记",
+      text: getLang(this.language).editNote,
       cls: "random-review-edit-btn",
     });
     this.editBtn.addEventListener("click", () => {
       void this.toggleEditLeaf();
     });
 
+    this.historyBtn = topRight.createEl("button", {
+      text: getLang(this.language).quizViewHistory,
+      cls: "random-review-edit-btn",
+    });
+    this.historyBtn.addEventListener("click", () => {
+      this.openHistoryView();
+    });
+
     this.exportBtn = topRight.createEl("button", {
-      text: "导出",
+      text: getLang(this.language).exportNote,
       cls: "random-review-edit-btn",
     });
     this.exportBtn.addEventListener("click", () => {
@@ -138,17 +148,14 @@ export class ReviewView extends ItemView {
     this.quizToolbarEl = this.navBarEl.createDiv("random-review-quiz-toolbar");
     this.timerEl = this.quizToolbarEl.createSpan("random-review-quiz-timer");
     this.correctBtn = this.quizToolbarEl.createEl("button", {
-      text: "✓",
       cls: "random-review-quiz-btn quiz-correct",
     });
     this.correctBtn.addEventListener("click", () => this.markAnswer(true));
     this.wrongBtn = this.quizToolbarEl.createEl("button", {
-      text: "✗",
       cls: "random-review-quiz-btn quiz-wrong",
     });
     this.wrongBtn.addEventListener("click", () => this.markAnswer(false));
     this.skipBtn = this.quizToolbarEl.createEl("button", {
-      text: "⏭",
       cls: "random-review-quiz-btn quiz-skip",
     });
     this.skipBtn.addEventListener("click", () => this.markAnswer(null));
@@ -279,13 +286,21 @@ export class ReviewView extends ItemView {
     this.noteContentEl.focus();
   }
 
+  refreshUIText(): void {
+    this.updateUIText();
+  }
+
   private updateUIText(): void {
     const t = getLang(this.language);
     this.editBtn.setText(this.isEditing ? t.closeNote : t.editNote);
+    this.historyBtn.setText(t.quizViewHistory);
     this.exportBtn.setText(t.exportNote);
     this.prevBtn.setText(t.previous);
     this.nextBtn.setText(t.next);
     this.toggleAnswerBtn.setText(t.showAnswer);
+    this.correctBtn.setText(t.quizCorrectShortcut);
+    this.wrongBtn.setText(t.quizIncorrectShortcut);
+    this.skipBtn.setText(t.quizSkipShortcut);
   }
 
   private async renderNote(index: number): Promise<void> {
@@ -556,7 +571,7 @@ export class ReviewView extends ItemView {
     if (!this.plugin.settings.quizEnabled) return;
     const stats = this.quizStorage.getStats();
     this.scoreEl.setText(
-      `正确:${stats.correct} 错误:${stats.incorrect} 跳过:${stats.skipped}`
+      getLang(this.language).quizScore(stats.correct, stats.incorrect, stats.skipped)
     );
   }
 
@@ -579,6 +594,23 @@ export class ReviewView extends ItemView {
     this.updateQuizDisplay();
     // 标记后自动下一题
     void this.navigate(1);
+  }
+
+  private openHistoryView(): void {
+    const { workspace } = this.app;
+    const existing = workspace.getLeavesOfType(VIEW_TYPE_QUIZ_HISTORY);
+    let leaf: WorkspaceLeaf;
+    if (existing.length > 0) {
+      leaf = existing[0];
+    } else {
+      leaf = workspace.getRightLeaf(false)!;
+      leaf.setViewState({ type: VIEW_TYPE_QUIZ_HISTORY, active: true });
+    }
+    workspace.revealLeaf(leaf);
+    const view = leaf.view;
+    if (view instanceof QuizHistoryView) {
+      view.setData(this.queue, this.currentIndex);
+    }
   }
 
   private openExportModal(): void {

@@ -1,22 +1,26 @@
 # Random Review — Obsidian 随机复习插件
 
-[![English](https://img.shields.io/badge/English-README_EN-blue)](./README_EN.md)  [![Obsidian](https://img.shields.io/badge/Obsidian-Plugin-purple.svg)](https://obsidian.md)  [![Release](https://img.shields.io/github/v/release/ktlamors/obsidian-random-review)](https://github.com/ktlamors/obsidian-random-review/releases)  [![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)  [![Last Commit](https://img.shields.io/github/last-commit/ktlamors/obsidian-random-review)](https://github.com/ktlamors/obsidian-random-review)
+[![English](https://img.shields.io/badge/English-README_EN-blue)](./README_EN.md)  [![Obsidian](https://img.shields.io/badge/Obsidian-Plugin-purple.svg)](https://obsidian.md)  [![Release](https://img.shields.io/github/v/release/ktlamors/obsidian-random-review)](https://github.com/ktlamors/obsidian-random-review/releases)  [![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-> **English**: Random Review is an Obsidian plugin that randomly picks notes from a folder with tag and property filtering, browses them fullscreen with answer toggle, and exports results to HTML, Markdown, plain text, or Word. See [README_EN.md](./README_EN.md) for the full English guide.
+> **English**: See [README_EN.md](./README_EN.md) for the full English guide.
 
-从指定文件夹中按规则随机抽取笔记，全屏逐篇浏览复习，支持答案折叠/展开，可将抽取结果导出为 HTML、Markdown、纯文本或 Word。适用于闪卡自测、随机回顾、模拟抽题等场景。
+从指定文件夹按规则随机抽取笔记，全屏逐题浏览复习，支持答案折叠/展开、测验模式（计时器 + 正确/错误/跳过标记 + 答题统计），可将抽取结果导出为 HTML（交互式）、Markdown、纯文本或 Word。适用于闪卡自测、随机回顾、模拟抽题等场景。
 
 ## 功能
 
 - **🎲 随机抽取** — 从指定文件夹随机抽取笔记，支持设置抽取数量
 - **🏷️ 标签筛选** — 按包含/排除标签过滤笔记（OR 逻辑）
-- **📋 属性筛选** — 按「条件组」抽题：一个组内多条条件需全部满足（AND），不同组之间为任一满足（OR），每组可独立设置数量
+- **📋 属性条件组** — 组内多条条件同时满足（AND），不同组之间任一满足（OR），每组可独立设置抽取数量
 - **📂 文件夹排除** — 排除目标文件夹下的特定子文件夹
 - **👁 答案切换** — 一键展开/折叠笔记中的折叠 Callout（`> [!NOTE]-` 语法）
 - **✏️ 边看边改** — 复习中可在右侧分屏打开笔记编辑，保存后自动刷新
 - **💾 配置档案** — 支持命名档案，同一文件夹可保存多套抽取规则，切换档案即切换规则
-- **📤 结果导出** — 导出为 HTML（交互式）、Markdown、纯文本、Word(.docx)，可选导出答案、规则摘要、标题、属性
+- **📤 结果导出** — 导出为 HTML（交互式，可翻题、显示/隐藏答案）、Markdown、纯文本、Word(.docx)，可选导出答案、规则摘要、标题、属性
 - **🖱️ 三种启动方式** — 命令面板 / Ribbon 图标 / 文件夹右键菜单
+
+### 1.3.0
+
+**新增**：测验模式——复习时显示计时器，用 ✓/✗ 按钮标记正确/错误（快捷键 J/K），顶栏「历史」按钮打开右侧边栏查看逐题答题记录，鼠标悬停记录可点击「回顾」分屏打开原笔记；设置页新增测验模式开关与计时器停止时机选项；界面支持中英文切换。
 
 ### 1.2.1
 
@@ -24,7 +28,7 @@
 
 ### 1.2.0
 
-**新增**：导出功能——支持 HTML（交互式，可翻题、显示/隐藏答案）、Markdown、纯文本、Word(.docx) 四种格式；可选导出答案、抽取规则摘要、笔记标题、笔记属性。
+**新增**：导出功能——支持 HTML（交互式，可翻题、显示/隐藏答案）、Markdown、纯文本、Word(.docx) 四种格式；可选导出答案、规则摘要、笔记标题、笔记属性。
 
 ### 1.1.6
 
@@ -44,7 +48,7 @@
 
 ### 1.1.2
 
-**新增**：复习视图下内部链接可点击，点击后分屏显示点击内容。
+**新增**：复习视图下内部链接可点击，点击后分屏显示目标笔记。
 
 ## 安装
 
@@ -71,10 +75,10 @@
 设置 → 第三方插件 → Random Review → 设置：
 
 - **目标文件夹**：选择笔记所在的文件夹
-- **配置档案**：可新建、选择、重命名、删除档案；同一文件夹可保存多套规则（如「数学-单选」「数学-易错」），改动自动保存到当前档案
+- **配置档案**：可新建、选择、重命名、删除档案；同一文件夹可保存多套规则，改动自动保存到当前档案
 - **排除文件夹**：选择要跳过的子文件夹
 - **包含/排除标签**：按标签筛选
-- **属性筛选**：按「条件组」抽题，组内多条条件需同时满足（AND），不同组之间为任一满足（OR），每组可独立设置抽取数量；每个条件可选 等于/包含/不等于
+- **属性条件组**：组内多条条件同时满足（AND），不同组之间任一满足（OR），每组可独立设置抽取数量
 - **抽取数量**：未设置属性筛选时的默认数量
 - **答案默认折叠**：进入复习时 Callout 的初始状态
 
@@ -90,14 +94,18 @@
 
 ### 3. 复习操作
 
-| 操作          | 按钮/快捷键                             |
-| ------------- | --------------------------------------- |
-| 下一题        | 点击「下一题 →」或按`→` / `Space` |
-| 上一题        | 点击「← 上一题」或按`←`             |
-| 显示/隐藏答案 | 点击按钮或按`A`                       |
-| 编辑原笔记    | 点击「编辑原笔记」，右侧分屏编辑        |
-| 导出结果      | 点击「导出」，选择格式与范围后导出      |
-| 退出          | 点击`✕` 或按 `Esc`                 |
+| 操作 | 按钮 / 快捷键 |
+| --- | --- |
+| 下一题 | 点击「下一题 →」或按 `→` / `Space` |
+| 上一题 | 点击「← 上一题」或按 `←` |
+| 显示/隐藏答案 | 点击按钮或按 `A` |
+| 标记正确 | 点击 ✓ 或按 `J` |
+| 标记错误 | 点击 ✗ 或按 `K` |
+| 跳过 | 点击「跳过」或按 `⏭` |
+| 查看答题历史 | 点击顶栏「历史」按钮，右侧边栏显示逐题记录 |
+| 编辑原笔记 | 点击「编辑原笔记」，右侧分屏编辑 |
+| 导出结果 | 点击「导出」，选择格式与范围后导出 |
+| 退出 | 点击 `✕` 或按 `Esc` |
 
 ### 4. 笔记格式
 
@@ -115,12 +123,14 @@
 
 ## 键盘快捷键
 
-| 键                 | 功能          |
-| ------------------ | ------------- |
-| `→` / `Space` | 下一题        |
-| `←`             | 上一题        |
-| `A`              | 显示/隐藏答案 |
-| `Esc`            | 退出复习      |
+| 键 | 功能 |
+| --- | --- |
+| `→` / `Space` | 下一题 |
+| `←` | 上一题 |
+| `A` | 显示/隐藏答案 |
+| `J` | 标记正确 |
+| `K` | 标记错误 |
+| `Esc` | 退出复习 |
 
 ## 开发
 

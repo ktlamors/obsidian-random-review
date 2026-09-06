@@ -1,5 +1,5 @@
 import type RandomReviewPlugin from "./main";
-import type { AnswerRecord, QuizTimerStopMode } from "./constants";
+import type { AnswerRecord } from "./constants";
 
 const STORAGE_KEY = "quizData";
 
@@ -29,6 +29,12 @@ export class QuizStorage {
     if (!raw || !raw[STORAGE_KEY]) return [];
     const data = raw[STORAGE_KEY] as QuizStorageData;
     return data.sessions ?? [];
+  }
+
+  /** 返回指定 sessionId 的所有答题记录 */
+  async resumeSession(sessionId: string): Promise<AnswerRecord[]> {
+    const results = await this.load();
+    return results.filter((r) => r.sessionId === sessionId);
   }
 
   async saveSession(sessionId: string, noteCount: number): Promise<void> {

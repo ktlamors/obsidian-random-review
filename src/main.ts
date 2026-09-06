@@ -17,6 +17,7 @@ import {
 import { RandomReviewSettingTab } from "./settings";
 import { extractNotes } from "./note-extractor";
 import { ReviewView } from "./review-view";
+import { QuizHistoryView, VIEW_TYPE_QUIZ_HISTORY } from "./quiz-history-view";
 import { getLang } from "./i18n";
 
 /** Obsidian 内部设置管理器的最小接口（未在公开类型中暴露） */
@@ -73,6 +74,10 @@ export default class RandomReviewPlugin extends Plugin {
     this.registerView(
       VIEW_TYPE_RANDOM_REVIEW,
       (leaf: WorkspaceLeaf) => new ReviewView(leaf, this)
+    );
+    this.registerView(
+      VIEW_TYPE_QUIZ_HISTORY,
+      (leaf: WorkspaceLeaf) => new QuizHistoryView(leaf, this)
     );
 
     this.registerStartCommand();
@@ -135,6 +140,10 @@ export default class RandomReviewPlugin extends Plugin {
       "aria-label",
       getLang(this.settings.language).ribbonTooltip
     );
+    const leaf = this.app.workspace.getLeavesOfType(VIEW_TYPE_RANDOM_REVIEW)[0];
+    if (leaf?.view instanceof ReviewView) {
+      leaf.view.refreshUIText();
+    }
   }
 
   onunload(): void {

@@ -5,6 +5,7 @@ import {
   TFolder,
   TAbstractFile,
   Notice,
+  WorkspaceLeaf,
 } from "obsidian";
 import type RandomReviewPlugin from "./main";
 import {
@@ -14,6 +15,7 @@ import {
 } from "./constants";
 import { getLang, Language } from "./i18n";
 import { QuizStorage } from "./quiz-storage";
+import { VIEW_TYPE_QUIZ_HISTORY } from "./quiz-history-view";
 
 // ──────────────────────────────────────────────
 // 工具函数
@@ -151,14 +153,49 @@ export class RandomReviewSettingTab extends PluginSettingTab {
 
     new Setting(containerEl).setName(t.quizStatsTitle).setHeading();
     const stats = storage.getStats();
-    containerEl.createEl("p", {
-      text: t.quizStatsSummary(stats.total, stats.correct, stats.incorrect, stats.skipped, stats.avgTime),
-      cls: "setting-item-description",
-    });
+    if (stats.total === 0) {
+      containerEl.createEl("p", {
+        text: t.quizStatsNoHistory,
+        cls: "setting-item-description",
+      });
+    } else {
+      const accuracy = stats.total > 0
+        ? Math.round((stats.correct / (stats.correct + stats.incorrect)) * 100)
+        : 0;
+      const table = containerEl.createDiv("quiz-stats-grid");
+      const row = (label: string, value: string): void => {
+        const r = table.createDiv("quiz-stat-row");
+        r.createSpan("quiz-stat-label").setText(label);
+        r.createSpan("quiz-stat-value").setText(value);
+      };
+      row(t.quizStatsTotal, String(stats.total));
+      row(t.quizCorrect, String(stats.correct));
+      row(t.quizIncorrect, String(stats.incorrect));
+      row(t.quizSkipped, String(stats.skipped));
+      row(t.quizStatsAccuracy, `${accuracy}%`);
+      row(
+        t.quizStatsAvgTime,
+        stats.avgTime > 0 ? `${Math.round(stats.avgTime / 1000)}s` : "—"
+      );
+    }
 
     new Setting(containerEl)
       .addButton((btn) =>
-        btn.setButtonText(t.quizClearHistory).onClick(async () => {
+        btn.setButtonText(t.quizViewHistory).onClick(() => {
+          const { workspace } = this.app;
+          const existing = workspace.getLeavesOfType(VIEW_TYPE_QUIZ_HISTORY);
+          let leaf: WorkspaceLeaf;
+          if (existing.length > 0) {
+            leaf = existing[0];
+          } else {
+            leaf = workspace.getRightLeaf(false)!;
+            leaf.setViewState({ type: VIEW_TYPE_QUIZ_HISTORY, active: true });
+          }
+          workspace.revealLeaf(leaf);
+        })
+      )
+      .addButton((btn) =>
+        btn.setButtonText(t.quizClearHistory).setWarning().onClick(async () => {
           await storage.clear();
           this.plugin.settings.answerHistory = [];
           await this.plugin.saveSettings();
