@@ -97,7 +97,7 @@ export class QuizHistoryView extends ItemView {
         reviewBtn.addEventListener("click", () => {
           const file = this.queue.find(f => f.path === r.filePath);
           if (file) {
-            this.app.workspace.openLinkText(r.filePath, this.queue[this.currentIndex]?.path ?? "", "split");
+            void this.app.workspace.openLinkText(r.filePath, this.queue[this.currentIndex]?.path ?? "", "split");
           }
         });
       });

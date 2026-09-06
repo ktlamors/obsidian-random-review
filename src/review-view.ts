@@ -150,15 +150,15 @@ export class ReviewView extends ItemView {
     this.correctBtn = this.quizToolbarEl.createEl("button", {
       cls: "random-review-quiz-btn quiz-correct",
     });
-    this.correctBtn.addEventListener("click", () => this.markAnswer(true));
+    this.correctBtn.addEventListener("click", () => { void this.markAnswer(true); });
     this.wrongBtn = this.quizToolbarEl.createEl("button", {
       cls: "random-review-quiz-btn quiz-wrong",
     });
-    this.wrongBtn.addEventListener("click", () => this.markAnswer(false));
+    this.wrongBtn.addEventListener("click", () => { void this.markAnswer(false); });
     this.skipBtn = this.quizToolbarEl.createEl("button", {
       cls: "random-review-quiz-btn quiz-skip",
     });
-    this.skipBtn.addEventListener("click", () => this.markAnswer(null));
+    this.skipBtn.addEventListener("click", () => { void this.markAnswer(null); });
     this.scoreEl = this.quizToolbarEl.createSpan("random-review-quiz-score");
     this.updateQuizVisibility();
 
@@ -604,9 +604,9 @@ export class ReviewView extends ItemView {
       leaf = existing[0];
     } else {
       leaf = workspace.getRightLeaf(false)!;
-      leaf.setViewState({ type: VIEW_TYPE_QUIZ_HISTORY, active: true });
+      void leaf.setViewState({ type: VIEW_TYPE_QUIZ_HISTORY, active: true });
     }
-    workspace.revealLeaf(leaf);
+    void workspace.revealLeaf(leaf);
     const view = leaf.view;
     if (view instanceof QuizHistoryView) {
       view.setData(this.queue, this.currentIndex);

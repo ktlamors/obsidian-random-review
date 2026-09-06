@@ -189,13 +189,13 @@ export class RandomReviewSettingTab extends PluginSettingTab {
             leaf = existing[0];
           } else {
             leaf = workspace.getRightLeaf(false)!;
-            leaf.setViewState({ type: VIEW_TYPE_QUIZ_HISTORY, active: true });
+            void leaf.setViewState({ type: VIEW_TYPE_QUIZ_HISTORY, active: true });
           }
-          workspace.revealLeaf(leaf);
+          void workspace.revealLeaf(leaf);
         })
       )
       .addButton((btn) =>
-        btn.setButtonText(t.quizClearHistory).setWarning().onClick(async () => {
+        btn.setButtonText(t.quizClearHistory).setDestructive().onClick(async () => {
           await storage.clear();
           this.plugin.settings.answerHistory = [];
           await this.plugin.saveSettings();
