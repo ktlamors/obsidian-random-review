@@ -4,6 +4,7 @@ import {
   Setting,
   TFolder,
   TAbstractFile,
+  Notice,
 } from "obsidian";
 import type RandomReviewPlugin from "./main";
 import {
@@ -12,6 +13,7 @@ import {
   PropertyOperator,
 } from "./constants";
 import { getLang, Language } from "./i18n";
+import { QuizStorage } from "./quiz-storage";
 
 // ──────────────────────────────────────────────
 // 工具函数
@@ -76,7 +78,7 @@ function createFolderSelect(
 // ──────────────────────────────────────────────
 export class RandomReviewSettingTab extends PluginSettingTab {
   plugin: RandomReviewPlugin;
-  private activeTab: "general" | "extraction" = "extraction";
+  private activeTab: "general" | "extraction" | "quiz" = "extraction";
 
   constructor(app: App, plugin: RandomReviewPlugin) {
     super(app, plugin);
@@ -91,7 +93,7 @@ export class RandomReviewSettingTab extends PluginSettingTab {
 
     // ── 选项卡栏 ──
     const tabBar = containerEl.createDiv("random-review-tabs");
-    const makeTab = (key: "general" | "extraction", label: string): void => {
+    const makeTab = (key: "general" | "extraction" | "quiz", label: string): void => {
       const btn = tabBar.createEl("button", {
         text: label,
         cls: "random-review-tab",
@@ -104,14 +106,66 @@ export class RandomReviewSettingTab extends PluginSettingTab {
     };
     makeTab("general", t.tabGeneral);
     makeTab("extraction", t.tabExtraction);
+    makeTab("quiz", t.tabQuiz);
 
     const contentEl = containerEl.createDiv("random-review-tab-content");
 
     if (this.activeTab === "general") {
       this.displayGeneral(contentEl, t);
+    } else if (this.activeTab === "quiz") {
+      this.displayQuiz(contentEl, t);
     } else {
       this.displayExtraction(contentEl, t);
     }
+  }
+
+  // ──────────────────────────────────────────
+  // 测试模式选项卡
+  // ──────────────────────────────────────────
+
+  private displayQuiz(containerEl: HTMLElement, t: ReturnType<typeof getLang>): void {
+    const storage = new QuizStorage(this.plugin);
+
+    new Setting(containerEl)
+      .setName(t.quizEnabled)
+      .setDesc(t.quizEnabledDesc)
+      .addToggle((toggle) => {
+        toggle.setValue(this.plugin.settings.quizEnabled).onChange(async (v) => {
+          this.plugin.settings.quizEnabled = v;
+          await this.plugin.saveSettings();
+        });
+      });
+
+    new Setting(containerEl)
+      .setName(t.quizTimerStopMode)
+      .setDesc(t.quizTimerStopModeDesc)
+      .addDropdown((dd) => {
+        dd.addOption("answer", t.quizStopAnswer);
+        dd.addOption("mark", t.quizStopMark);
+        dd.addOption("navigate", t.quizStopNavigate);
+        dd.setValue(this.plugin.settings.quizTimerStopMode).onChange(async (v) => {
+          this.plugin.settings.quizTimerStopMode = v as "answer" | "mark" | "navigate";
+          await this.plugin.saveSettings();
+        });
+      });
+
+    new Setting(containerEl).setName(t.quizStatsTitle).setHeading();
+    const stats = storage.getStats();
+    containerEl.createEl("p", {
+      text: t.quizStatsSummary(stats.total, stats.correct, stats.incorrect, stats.skipped, stats.avgTime),
+      cls: "setting-item-description",
+    });
+
+    new Setting(containerEl)
+      .addButton((btn) =>
+        btn.setButtonText(t.quizClearHistory).onClick(async () => {
+          await storage.clear();
+          this.plugin.settings.answerHistory = [];
+          await this.plugin.saveSettings();
+          this.display();
+          new Notice(t.quizHistoryCleared);
+        })
+      );
   }
 
   // ──────────────────────────────────────────

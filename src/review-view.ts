@@ -10,6 +10,7 @@ import { VIEW_TYPE_RANDOM_REVIEW } from "./constants";
 import { getLang, Language } from "./i18n";
 import type RandomReviewPlugin from "./main";
 import { ExportModal } from "./export-modal";
+import { QuizStorage } from "./quiz-storage";
 
 export class ReviewView extends ItemView {
   private queue: TFile[] = [];
@@ -36,6 +37,18 @@ export class ReviewView extends ItemView {
   private language: Language = "zh";
   private isEditing: boolean = false;
   private editingFile: TFile | null = null;
+
+  // ── 测试模式 ──
+  private quizStorage!: QuizStorage;
+  private noteStartTime: number = 0;
+  private currentSessionId: string = "";
+  private timerInterval: number | null = null;
+  private quizToolbarEl!: HTMLElement;
+  private timerEl!: HTMLElement;
+  private correctBtn!: HTMLButtonElement;
+  private wrongBtn!: HTMLButtonElement;
+  private skipBtn!: HTMLButtonElement;
+  private scoreEl!: HTMLElement;
 
   constructor(leaf: WorkspaceLeaf, plugin: RandomReviewPlugin) {
     super(leaf);
@@ -121,6 +134,27 @@ export class ReviewView extends ItemView {
     });
     this.toggleAnswerBtn.addEventListener("click", () => this.toggleAnswer());
 
+    // 测试模式工具栏
+    this.quizToolbarEl = this.navBarEl.createDiv("random-review-quiz-toolbar");
+    this.timerEl = this.quizToolbarEl.createSpan("random-review-quiz-timer");
+    this.correctBtn = this.quizToolbarEl.createEl("button", {
+      text: "✓",
+      cls: "random-review-quiz-btn quiz-correct",
+    });
+    this.correctBtn.addEventListener("click", () => this.markAnswer(true));
+    this.wrongBtn = this.quizToolbarEl.createEl("button", {
+      text: "✗",
+      cls: "random-review-quiz-btn quiz-wrong",
+    });
+    this.wrongBtn.addEventListener("click", () => this.markAnswer(false));
+    this.skipBtn = this.quizToolbarEl.createEl("button", {
+      text: "⏭",
+      cls: "random-review-quiz-btn quiz-skip",
+    });
+    this.skipBtn.addEventListener("click", () => this.markAnswer(null));
+    this.scoreEl = this.quizToolbarEl.createSpan("random-review-quiz-score");
+    this.updateQuizVisibility();
+
     // 键盘事件
     this.containerEl.addEventListener("keydown", this.boundHandleKeydown);
 
@@ -158,6 +192,7 @@ export class ReviewView extends ItemView {
     this.containerEl.removeEventListener("keydown", this.boundHandleKeydown);
     this.noteContentEl.removeEventListener("click", this.boundHandleLinkClick);
     if (this.isEditing) this.closeEditPane();
+    this.stopQuizTimer();
   }
 
   private async toggleEditLeaf(): Promise<void> {
@@ -203,6 +238,14 @@ export class ReviewView extends ItemView {
 
     this.answerVisible = !answerDefaultCollapsed;
     this.updateUIText();
+
+    // 测试模式初始化
+    this.quizStorage = new QuizStorage(this.plugin);
+    this.currentSessionId =
+      Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+    void this.quizStorage.saveSession(this.currentSessionId, queue.length);
+    this.updateQuizVisibility();
+    this.updateQuizDisplay();
 
     if (showNavBar) {
       this.navBarEl.removeClass("random-review-hidden");
@@ -264,6 +307,8 @@ export class ReviewView extends ItemView {
       return;
     }
 
+    this.stopQuizTimer();
+
     try {
       const content = await this.app.vault.read(file);
       this.titleEl.setText(file.basename);
@@ -280,6 +325,13 @@ export class ReviewView extends ItemView {
       );
 
       this.applyAnswerState();
+
+      // 测试模式：新题计时开始
+      if (this.plugin.settings.quizEnabled) {
+        this.noteStartTime = Date.now();
+        this.startQuizTimer();
+        this.updateQuizDisplay();
+      }
 
       // 如果编辑面板已打开，同步切换到新笔记
       if (this.isEditing) {
@@ -365,13 +417,47 @@ export class ReviewView extends ItemView {
       return;
     }
 
+    // 测试模式：离开时如果计时器还在跑且模式为 navigate，先记录跳过
+    if (
+      this.plugin.settings.quizEnabled &&
+      this.plugin.settings.quizTimerStopMode === "navigate" &&
+      this.noteStartTime > 0
+    ) {
+      const file = this.queue[this.currentIndex];
+      if (file) {
+        const durationMs = Date.now() - this.noteStartTime;
+        await this.quizStorage.append({
+          filePath: file.path,
+          sessionId: this.currentSessionId,
+          timestamp: new Date().toISOString(),
+          durationMs,
+          correct: null,
+          stoppedBy: "navigate",
+        });
+        this.plugin.settings.answerHistory = await this.quizStorage.load();
+        this.updateQuizDisplay();
+      }
+    }
+
+    this.stopQuizTimer();
     await this.renderNote(newIndex);
   }
 
   private toggleAnswer(): void {
+    const wasHidden = !this.answerVisible;
     this.answerVisible = !this.answerVisible;
     this.applyAnswerState();
     this.updateUIState();
+
+    // 测试模式：答案显示时停止计时
+    if (
+      wasHidden &&
+      this.answerVisible &&
+      this.plugin.settings.quizEnabled &&
+      this.plugin.settings.quizTimerStopMode === "answer"
+    ) {
+      this.stopQuizTimer();
+    }
   }
 
   private handleLinkClick(event: MouseEvent): void {
@@ -408,6 +494,20 @@ export class ReviewView extends ItemView {
         event.preventDefault();
         this.toggleAnswer();
         break;
+      case "j":
+      case "J":
+        if (this.plugin.settings.quizEnabled) {
+          event.preventDefault();
+          void this.markAnswer(true);
+        }
+        break;
+      case "k":
+      case "K":
+        if (this.plugin.settings.quizEnabled) {
+          event.preventDefault();
+          void this.markAnswer(false);
+        }
+        break;
       case "Escape":
         event.preventDefault();
         this.closeView();
@@ -417,6 +517,68 @@ export class ReviewView extends ItemView {
 
   private closeView(): void {
     this.leaf.detach();
+  }
+
+  // ── 测试模式 ──
+
+  private startQuizTimer(): void {
+    this.stopQuizTimer();
+    if (!this.plugin.settings.quizEnabled) return;
+    this.timerInterval = window.setInterval(() => {
+      const elapsed = Date.now() - this.noteStartTime;
+      const mins = Math.floor(elapsed / 60000);
+      const secs = Math.floor((elapsed % 60000) / 1000);
+      if (this.timerEl) {
+        this.timerEl.setText(
+          `${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`
+        );
+      }
+    }, 1000);
+  }
+
+  private stopQuizTimer(): void {
+    if (this.timerInterval !== null) {
+      window.clearInterval(this.timerInterval);
+      this.timerInterval = null;
+    }
+  }
+
+  private updateQuizVisibility(): void {
+    const enabled = this.plugin.settings.quizEnabled;
+    if (enabled) {
+      this.quizToolbarEl.removeClass("random-review-hidden");
+    } else {
+      this.quizToolbarEl.addClass("random-review-hidden");
+    }
+  }
+
+  private updateQuizDisplay(): void {
+    if (!this.plugin.settings.quizEnabled) return;
+    const stats = this.quizStorage.getStats();
+    this.scoreEl.setText(
+      `正确:${stats.correct} 错误:${stats.incorrect} 跳过:${stats.skipped}`
+    );
+  }
+
+  async markAnswer(correct: boolean | null): Promise<void> {
+    if (!this.plugin.settings.quizEnabled) return;
+    const file = this.queue[this.currentIndex];
+    if (!file) return;
+    const durationMs = Date.now() - this.noteStartTime;
+    const stoppedBy: "answer" | "mark" | "navigate" = correct !== null ? "mark" : "navigate";
+    const record = {
+      filePath: file.path,
+      sessionId: this.currentSessionId,
+      timestamp: new Date().toISOString(),
+      durationMs,
+      correct,
+      stoppedBy,
+    };
+    await this.quizStorage.append(record);
+    this.plugin.settings.answerHistory = await this.quizStorage.load();
+    this.updateQuizDisplay();
+    // 标记后自动下一题
+    void this.navigate(1);
   }
 
   private openExportModal(): void {

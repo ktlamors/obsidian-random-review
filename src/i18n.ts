@@ -103,6 +103,24 @@ const zh = {
   answerDefaultCollapsed: "答案默认折叠",
   showNavigationBar: "显示导航栏",
 
+  // 测试模式
+  tabQuiz: "测试模式",
+  quizEnabled: "启用答题记录",
+  quizEnabledDesc: "记录每道题的答题结果、耗时和正确率",
+  quizTimerStopMode: "计时停止时机",
+  quizTimerStopModeDesc: "选择计时器何时停止",
+  quizStopAnswer: "答案显示时",
+  quizStopMark: "标记对错时",
+  quizStopNavigate: "离开题目时",
+  quizStatsTitle: "历史统计",
+  quizStatsSummary: (total: number, correct: number, incorrect: number, skipped: number, avgTime: number) =>
+    `总答题: ${total} | 正确: ${correct} | 错误: ${incorrect} | 跳过: ${skipped} | 平均用时: ${avgTime > 0 ? Math.round(avgTime / 1000) + "秒" : "无数据"}`,
+  quizClearHistory: "清除历史记录",
+  quizHistoryCleared: "历史记录已清除",
+  quizScore: (c: number, w: number, s: number) => `正确 ${c}  错误 ${w}  跳过 ${s}`,
+  quizViewHistory: "查看答题历史",
+  quizViewHistoryDesc: "打开答题统计面板",
+
   // 复习视图
   editNote: "编辑原笔记",
   closeNote: "关闭原笔记",
@@ -253,6 +271,21 @@ const en = {
   answerDefaultCollapsed: "Collapse Answers by Default",
   showNavigationBar: "Show Navigation Bar",
 
+  // 测试模式
+  tabQuiz: "Quiz Mode",
+  quizEnabled: "Enable Quiz Tracking",
+  quizEnabledDesc: "Record each question's answer, duration, and accuracy",
+  quizTimerStopMode: "Timer Stop Mode",
+  quizTimerStopModeDesc: "When should the timer stop",
+  quizStopAnswer: "When answer is shown",
+  quizStopMark: "When marking correct/incorrect",
+  quizStopNavigate: "When navigating away",
+  quizStatsTitle: "History Stats",
+  quizStatsSummary: (total: number, correct: number, incorrect: number, skipped: number, avgTime: number) =>
+    `Total: ${total} | Correct: ${correct} | Wrong: ${incorrect} | Skipped: ${skipped} | Avg time: ${avgTime > 0 ? Math.round(avgTime / 1000) + "s" : "N/A"}`,
+  quizClearHistory: "Clear History",
+  quizHistoryCleared: "History cleared",
+
   // 复习视图
   editNote: "Edit Note",
   closeNote: "Close Note",
@@ -267,6 +300,17 @@ const en = {
   deletedSkip: (name: string) => `Note "${name}" was deleted; skipped automatically`,
   readFailed: (name: string) => `Failed to read note: ${name}`,
   completed: "Round complete! Adjust settings and restart to review again",
+
+  // 测验模式
+  quizCorrect: "Correct",
+  quizIncorrect: "Incorrect",
+  quizSkipped: "Skipped",
+  quizCorrectShortcut: "Correct (J)",
+  quizIncorrectShortcut: "Incorrect (K)",
+  quizSkipShortcut: "Skip (⏭)",
+  quizScore: (c: number, w: number, s: number) => `Correct ${c}  Incorrect ${w}  Skipped ${s}`,
+  quizViewHistory: "View Quiz History",
+  quizViewHistoryDesc: "Open the answer statistics panel",
 
   // 导出
   exportModalTitle: "Export Notes",

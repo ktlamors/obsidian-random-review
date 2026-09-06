@@ -3,6 +3,7 @@ export const VIEW_TYPE_RANDOM_REVIEW = "random-review-view";
 export const PLUGIN_NAME = "Random Review";
 
 export type PropertyOperator = "equals" | "contains" | "not-equals";
+export type QuizTimerStopMode = "answer" | "mark" | "navigate";
 
 /** 条件组内的一条属性条件（同组条件之间为 AND） */
 export interface PropertyCondition {
@@ -23,6 +24,16 @@ export interface LegacyPropertyFilter {
   value: string;
   operator: PropertyOperator;
   count: number;
+}
+
+/** 每道题的答题记录 */
+export interface AnswerRecord {
+  filePath: string;
+  sessionId: string;    // 关联到某次复习会话，可用于 resume
+  timestamp: string; // ISO 日期
+  durationMs: number; // 从题目显示到记录答题的毫秒数
+  correct: boolean | null; // true=正确, false=错误, null=跳过
+  stoppedBy: QuizTimerStopMode; // 计时停止原因
 }
 
 /** 每个目标文件夹的独立配置 */
@@ -61,6 +72,11 @@ export interface RandomReviewSettings {
   answerDefaultCollapsed: boolean;
   showNavigationBar: boolean;
 
+  // 测试模式
+  quizEnabled: boolean;
+  quizTimerStopMode: QuizTimerStopMode;
+  answerHistory: AnswerRecord[];
+
   // 当前激活的命名档案 id（自动保存目标）
   activeProfileId: string | null;
 
@@ -78,7 +94,8 @@ export const DEFAULT_PROFILE: FolderProfile = {
   randomOrder: true,
 };
 
-export const DEFAULT_SETTINGS: RandomReviewSettings = {  folderPath: "",
+export const DEFAULT_SETTINGS: RandomReviewSettings = {
+  folderPath: "",
   language: "zh",
   excludeFolders: [],
   includeTags: [],
@@ -88,6 +105,9 @@ export const DEFAULT_SETTINGS: RandomReviewSettings = {  folderPath: "",
   randomOrder: true,
   answerDefaultCollapsed: true,
   showNavigationBar: true,
+  quizEnabled: true,
+  quizTimerStopMode: "answer",
+  answerHistory: [],
   activeProfileId: null,
   profiles: [],
 };
