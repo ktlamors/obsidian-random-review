@@ -16,6 +16,7 @@ import {
 import { getLang, Language } from "./i18n";
 import { QuizStorage } from "./quiz-storage";
 import { VIEW_TYPE_QUIZ_HISTORY } from "./quiz-history-view";
+import { HistoryStorage, HistoryEntry } from "./history-storage";
 
 // ──────────────────────────────────────────────
 // 工具函数
@@ -80,7 +81,12 @@ function createFolderSelect(
 // ──────────────────────────────────────────────
 export class RandomReviewSettingTab extends PluginSettingTab {
   plugin: RandomReviewPlugin;
-  private activeTab: "general" | "extraction" | "quiz" = "extraction";
+  private activeTab:
+    | "general"
+    | "extraction"
+    | "quiz"
+    | "history"
+    | "changelog" = "extraction";
 
   constructor(app: App, plugin: RandomReviewPlugin) {
     super(app, plugin);
@@ -93,9 +99,12 @@ export class RandomReviewSettingTab extends PluginSettingTab {
 
     const t = getLang(this.plugin.settings.language);
 
-    // ── 选项卡栏 ──
+    // ── 选项卡栏（放不下时可换行成两行） ──
     const tabBar = containerEl.createDiv("random-review-tabs");
-    const makeTab = (key: "general" | "extraction" | "quiz", label: string): void => {
+    const makeTab = (
+      key: "general" | "extraction" | "quiz" | "history" | "changelog",
+      label: string
+    ): void => {
       const btn = tabBar.createEl("button", {
         text: label,
         cls: "random-review-tab",
@@ -109,6 +118,8 @@ export class RandomReviewSettingTab extends PluginSettingTab {
     makeTab("general", t.tabGeneral);
     makeTab("extraction", t.tabExtraction);
     makeTab("quiz", t.tabQuiz);
+    makeTab("history", t.tabHistory);
+    makeTab("changelog", t.tabChangelog);
 
     const contentEl = containerEl.createDiv("random-review-tab-content");
 
@@ -116,6 +127,10 @@ export class RandomReviewSettingTab extends PluginSettingTab {
       this.displayGeneral(contentEl, t);
     } else if (this.activeTab === "quiz") {
       this.displayQuiz(contentEl, t);
+    } else if (this.activeTab === "history") {
+      this.displayHistory(contentEl, t);
+    } else if (this.activeTab === "changelog") {
+      this.displayChangelog(contentEl, t);
     } else {
       this.displayExtraction(contentEl, t);
     }
@@ -125,7 +140,7 @@ export class RandomReviewSettingTab extends PluginSettingTab {
   // 测试模式选项卡
   // ──────────────────────────────────────────
 
-  private displayQuiz(containerEl: HTMLElement, t: ReturnType<typeof getLang>): void {
+  private async displayQuiz(containerEl: HTMLElement, t: ReturnType<typeof getLang>): Promise<void> {
     const storage = new QuizStorage(this.plugin);
 
     new Setting(containerEl)
@@ -152,7 +167,7 @@ export class RandomReviewSettingTab extends PluginSettingTab {
       });
 
     new Setting(containerEl).setName(t.quizStatsTitle).setHeading();
-    const stats = storage.getStats();
+    const stats = await storage.getStats();
     if (stats.total === 0) {
       containerEl.createEl("p", {
         text: t.quizStatsNoHistory,
@@ -197,8 +212,6 @@ export class RandomReviewSettingTab extends PluginSettingTab {
       .addButton((btn) =>
         btn.setButtonText(t.quizClearHistory).setDestructive().onClick(async () => {
           await storage.clear();
-          this.plugin.settings.answerHistory = [];
-          await this.plugin.saveSettings();
           this.display();
           new Notice(t.quizHistoryCleared);
         })
@@ -206,9 +219,152 @@ export class RandomReviewSettingTab extends PluginSettingTab {
   }
 
   // ──────────────────────────────────────────
+  // 抽取历史选项卡
+  // ──────────────────────────────────────────
+
+  private async displayHistory(containerEl: HTMLElement, t: ReturnType<typeof getLang>): Promise<void> {
+    const storage = new HistoryStorage(this.plugin);
+    const entries = await storage.load();
+
+    if (entries.length === 0) {
+      containerEl.createEl("p", {
+        text: t.historyEmpty,
+        cls: "setting-item-description",
+      });
+      return;
+    }
+
+    const list = containerEl.createDiv("quiz-history-list");
+    entries.forEach((entry) => {
+      const item = list.createDiv("quiz-history-item");
+
+      const nameSpan = item.createSpan("quiz-history-file");
+      nameSpan.setText(entry.name);
+      item.createSpan("quiz-history-time").setText(
+        `${entry.noteCount} ${t.historyCount.toLowerCase()}`
+      );
+
+      item.createEl("button", {
+        text: t.historyLoad,
+        cls: "quiz-history-review-btn",
+      }).addEventListener("click", () => {
+        void this.loadHistoryFiles(entry);
+      });
+
+      item.createEl("button", {
+        text: t.historyRename,
+        cls: "quiz-history-review-btn",
+      }).addEventListener("click", () => {
+        this.startRenameHistory(nameSpan, entry, storage);
+      });
+
+      item.createEl("button", {
+        text: t.historyDelete,
+        cls: "quiz-history-review-btn",
+      }).addEventListener("click", () => {
+        void this.deleteHistoryEntry(entry.id, storage, t);
+      });
+    });
+  }
+
+  /** 切换到指定选项卡（供外部在打开设置前定位） */
+  activateTab(key: "general" | "extraction" | "quiz" | "history"): void {
+    this.activeTab = key;
+  }
+
+  /** 复制 QQ 群号（带剪贴板降级方案） */
+  private async copyQqNumber(): Promise<void> {
+    const t = getLang(this.plugin.settings.language);
+    const text = "283864869";
+    try {
+      await navigator.clipboard.writeText(text);
+    } catch {
+      const ta = document.body.createEl("textarea");
+      ta.value = text;
+      ta.select();
+      document.execCommand("copy");
+      ta.remove();
+    }
+    new Notice(t.qqCopyNotice);
+  }
+
+  /** 当设置面板正停留在历史选项卡时，重绘以反映最新数据 */
+  refreshHistoryView(): void {
+    if (this.activeTab === "history") this.display();
+  }
+
+  private async loadHistoryFiles(entry: HistoryEntry): Promise<void> {
+    await this.plugin.loadHistoryEntry(entry);
+  }
+
+  private startRenameHistory(nameSpan: HTMLElement, entry: HistoryEntry, storage: HistoryStorage): void {
+    nameSpan.empty();
+    const input = nameSpan.createEl("input", {
+      cls: "quiz-history-rename-input",
+      type: "text",
+    });
+    input.value = entry.name;
+    input.select();
+
+    let saved = false;
+    const save = async (): Promise<void> => {
+      if (saved) return;
+      saved = true;
+      const val = input.value.trim();
+      if (val && val !== entry.name) {
+        await storage.rename(entry.id, val);
+        new Notice(getLang(this.plugin.settings.language).historyRenamed);
+      }
+      this.plugin.notifyHistoryChanged();
+    };
+
+    input.addEventListener("keydown", (e: KeyboardEvent) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        void save();
+      } else if (e.key === "Escape") {
+        e.preventDefault();
+        this.plugin.notifyHistoryChanged();
+      }
+    });
+    input.addEventListener("blur", () => {
+      void save();
+    });
+    input.focus();
+  }
+
+  private async deleteHistoryEntry(id: string, storage: HistoryStorage, t: ReturnType<typeof getLang>): Promise<void> {
+    if (!confirm(t.historyDeleteConfirm)) return;
+    await storage.remove(id);
+    this.plugin.notifyHistoryChanged();
+    new Notice(t.historyDeleted);
+  }
+
+  // ──────────────────────────────────────────
   // 通用选项卡
   // ──────────────────────────────────────────
   private displayGeneral(containerEl: HTMLElement, t: ReturnType<typeof getLang>): void {
+    // 交流群入口
+    new Setting(containerEl)
+      .setName(t.communityJoin)
+      .setDesc("Telegram · QQ")
+      .addButton((btn) =>
+        btn
+          .setButtonText(t.telegramGroup)
+          .setTooltip("https://t.me/RandomReviewPlugin")
+          .onClick(() => {
+            window.open("https://t.me/RandomReviewPlugin", "_blank");
+          })
+      )
+      .addButton((btn) =>
+        btn
+          .setButtonText(t.qqGroup)
+          .setTooltip("283864869")
+          .onClick(() => {
+            void this.copyQqNumber();
+          })
+      );
+
     new Setting(containerEl)
       .setName(t.languageSetting)
       .setDesc(t.languageDesc)
@@ -232,8 +388,12 @@ export class RandomReviewSettingTab extends PluginSettingTab {
     t.usageItems.forEach((item) => {
       usageList.createEl("li", { text: item });
     });
+  }
 
-    new Setting(containerEl).setName(t.updateLogTitle).setHeading();
+  // ──────────────────────────────────────────
+  // 更新日志选项卡
+  // ──────────────────────────────────────────
+  private displayChangelog(containerEl: HTMLElement, t: ReturnType<typeof getLang>): void {
     const logList = containerEl.createDiv("random-review-changelog");
     t.updateLogItems.forEach((item) => {
       const li = logList.createDiv("changelog-item");

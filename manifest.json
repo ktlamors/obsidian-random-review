@@ -1,9 +1,9 @@
 {
   "id": "random-review",
   "name": "Random Review",
-  "version": "1.3.0",
+  "version": "1.4.0",
   "minAppVersion": "1.13.0",
-  "description": "Randomly select notes from specified folders with tag and property filtering, fullscreen review with answer toggle, quiz mode with timer and scoring, and export to multiple formats.",
+  "description": "Randomly pick notes from folders with tag/property filters, fullscreen review with answer toggle, quiz mode with timer and per-extraction answer history, wrong-answer review and retry, and export to HTML/Markdown/Word.",
   "author": "TimeLine",
   "authorUrl": "https://github.com/ktlamors",
   "isDesktopOnly": false

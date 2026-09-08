@@ -12,6 +12,7 @@ import type RandomReviewPlugin from "./main";
 import { ExportModal } from "./export-modal";
 import { QuizStorage } from "./quiz-storage";
 import { QuizHistoryView, VIEW_TYPE_QUIZ_HISTORY } from "./quiz-history-view";
+import { HISTORY_VIEW_TYPE } from "./history-sidebar-view";
 
 export class ReviewView extends ItemView {
   private queue: TFile[] = [];
@@ -32,11 +33,15 @@ export class ReviewView extends ItemView {
   private exitBtn!: HTMLButtonElement;
   private editBtn!: HTMLButtonElement;
   private historyBtn!: HTMLButtonElement;
+  private extractionHistoryBtn!: HTMLButtonElement;
   private exportBtn!: HTMLButtonElement;
 
   private answerDefaultCollapsed: boolean = true;
   private showNavBar: boolean = true;
   private language: Language = "zh";
+  private extractionName: string = "";
+  /** 当前复习会话对应的抽取历史 id（从历史加载时设置，用于去重检测） */
+  historyId: string | null = null;
   private isEditing: boolean = false;
   private editingFile: TFile | null = null;
 
@@ -62,7 +67,15 @@ export class ReviewView extends ItemView {
   }
 
   getDisplayText(): string {
-    return "Random Review";
+    return this.extractionName || "Random Review";
+  }
+
+  /** 名称变化后让 Obsidian 重新读取 getDisplayText 刷新标签页标题 */
+  private refreshTabTitle(): void {
+    const leaf = this.leaf as unknown as { updateHeader?: () => void };
+    if (leaf && typeof leaf.updateHeader === "function") {
+      leaf.updateHeader();
+    }
   }
 
   getIcon(): string {
@@ -102,6 +115,14 @@ export class ReviewView extends ItemView {
     });
     this.exportBtn.addEventListener("click", () => {
       this.openExportModal();
+    });
+
+    this.extractionHistoryBtn = topRight.createEl("button", {
+      text: getLang(this.language).btnExtractionHistory,
+      cls: "random-review-edit-btn",
+    });
+    this.extractionHistoryBtn.addEventListener("click", () => {
+      void this.openExtractionHistory();
     });
 
     this.exitBtn = topRight.createEl("button", {
@@ -235,13 +256,19 @@ export class ReviewView extends ItemView {
     queue: TFile[],
     answerDefaultCollapsed: boolean,
     showNavBar: boolean,
-    language: Language
+    language: Language,
+    meta: { title: string; historyId: string | null }
   ): Promise<void> {
     this.queue = queue;
     this.currentIndex = 0;
     this.answerDefaultCollapsed = answerDefaultCollapsed;
     this.showNavBar = showNavBar;
     this.language = language;
+
+    // 抽取历史的保存与命名由入口（main）负责，此处仅绑定标题与会话归属
+    this.historyId = meta.historyId;
+    this.extractionName = meta.title;
+    this.refreshTabTitle();
 
     this.answerVisible = !answerDefaultCollapsed;
     this.updateUIText();
@@ -252,7 +279,7 @@ export class ReviewView extends ItemView {
       Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
     void this.quizStorage.saveSession(this.currentSessionId, queue.length);
     this.updateQuizVisibility();
-    this.updateQuizDisplay();
+    await this.updateQuizDisplay();
 
     if (showNavBar) {
       this.navBarEl.removeClass("random-review-hidden");
@@ -295,6 +322,7 @@ export class ReviewView extends ItemView {
     this.editBtn.setText(this.isEditing ? t.closeNote : t.editNote);
     this.historyBtn.setText(t.quizViewHistory);
     this.exportBtn.setText(t.exportNote);
+    this.extractionHistoryBtn.setText(t.btnExtractionHistory);
     this.prevBtn.setText(t.previous);
     this.nextBtn.setText(t.next);
     this.toggleAnswerBtn.setText(t.showAnswer);
@@ -345,7 +373,7 @@ export class ReviewView extends ItemView {
       if (this.plugin.settings.quizEnabled) {
         this.noteStartTime = Date.now();
         this.startQuizTimer();
-        this.updateQuizDisplay();
+        await this.updateQuizDisplay();
       }
 
       // 如果编辑面板已打开，同步切换到新笔记
@@ -448,9 +476,10 @@ export class ReviewView extends ItemView {
           durationMs,
           correct: null,
           stoppedBy: "navigate",
+          historyId: this.historyId,
         });
-        this.plugin.settings.answerHistory = await this.quizStorage.load();
-        this.updateQuizDisplay();
+        await this.updateQuizDisplay();
+        this.plugin.refreshQuizHistoryViews();
       }
     }
 
@@ -567,9 +596,11 @@ export class ReviewView extends ItemView {
     }
   }
 
-  private updateQuizDisplay(): void {
+  private async updateQuizDisplay(): Promise<void> {
     if (!this.plugin.settings.quizEnabled) return;
-    const stats = this.quizStorage.getStats();
+    const stats = await this.quizStorage.getStats({
+      sessionId: this.currentSessionId,
+    });
     this.scoreEl.setText(
       getLang(this.language).quizScore(stats.correct, stats.incorrect, stats.skipped)
     );
@@ -588,10 +619,12 @@ export class ReviewView extends ItemView {
       durationMs,
       correct,
       stoppedBy,
+      historyId: this.historyId,
     };
     await this.quizStorage.append(record);
-    this.plugin.settings.answerHistory = await this.quizStorage.load();
-    this.updateQuizDisplay();
+    await this.updateQuizDisplay();
+    // 记录已变，通知答题历史视图刷新
+    this.plugin.refreshQuizHistoryViews();
     // 标记后自动下一题
     void this.navigate(1);
   }
@@ -610,6 +643,23 @@ export class ReviewView extends ItemView {
     const view = leaf.view;
     if (view instanceof QuizHistoryView) {
       view.setData(this.queue, this.currentIndex);
+    }
+  }
+
+  private async openExtractionHistory(): Promise<void> {
+    const { workspace } = this.app;
+    const existing = workspace.getLeavesOfType(HISTORY_VIEW_TYPE);
+    let leaf: WorkspaceLeaf;
+    if (existing.length > 0) {
+      leaf = existing[0];
+    } else {
+      leaf = workspace.getRightLeaf(false)!;
+      void leaf.setViewState({ type: HISTORY_VIEW_TYPE, active: true });
+    }
+    void workspace.revealLeaf(leaf);
+    const view = leaf.view;
+    if (view && "refresh" in view && typeof (view as unknown as { refresh: () => Promise<void> }).refresh === "function") {
+      await (view as unknown as { refresh: () => Promise<void> }).refresh();
     }
   }
 

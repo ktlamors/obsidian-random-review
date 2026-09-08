@@ -2,7 +2,14 @@
 
 [![中文](https://img.shields.io/badge/中文-README_ZH-blue)](./README_ZH.md)  [![Obsidian](https://img.shields.io/badge/Obsidian-Plugin-purple.svg)](https://obsidian.md)  [![Release](https://img.shields.io/github/v/release/ktlamors/obsidian-random-review)](https://github.com/ktlamors/obsidian-random-review/releases)  [![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-Randomly select notes from specified folders with tag and property filtering, browse them fullscreen with answer toggle, quiz mode with timer and scoring, and export to multiple formats. Ideal for flashcard review, random browsing, and quiz simulation.
+Randomly pick notes from a folder with tag and property filtering, review them fullscreen with one-click answer toggle, run quiz mode with a timer, and keep per-extraction answer history with wrong-answer review. Export sessions to HTML, Markdown, plain text, or Word. Ideal for flashcard review, random browsing, wrong-answer retraining, and quiz simulation.
+
+## Community
+
+Feedback and questions are welcome:
+
+- **Telegram**: [t.me/RandomReviewPlugin](https://t.me/RandomReviewPlugin)
+- **QQ Group**: `283864869` (search the group number in QQ to join)
 
 ## Features
 
@@ -13,8 +20,15 @@ Randomly select notes from specified folders with tag and property filtering, br
 - **👁 Answer Toggle** — Expand/collapse folded callouts (`> [!NOTE]-`) with one click
 - **✏️ Edit While Reviewing** — Open notes in a split pane for editing, auto-refresh on save
 - **💾 Configuration Profiles** — Named profiles; a folder can have multiple rule sets, switch profiles to switch rules
+- **🗂 Extraction History** — Every extraction is saved automatically (profile + date), renamable, deduped when the same notes are picked again, and reloadable with one click from the right "Extraction History" panel
+- **📊 Quiz History by Extraction** — Answer records are linked to their extraction and aggregated per extraction in the right "Quiz History" panel, with correct/incorrect/skipped stats
+- **❌ Wrong-Answer Review** — Filter "wrong only", then review a single extraction's mistakes or all wrong notes at once; notes you answer correctly are removed from the wrong set automatically
 - **📤 Export** — Export to HTML (interactive, with navigation and show/hide answers), Markdown, plain text, or Word (.docx); optional answers, rules summary, titles, and properties
-- **🖱️ Three Launch Methods** — Command palette / Ribbon icon / Folder context menu
+- **🖱️ Three Launch Methods** — Command palette / Ribbon icon (left-click extracts, right-click opens a menu) / Folder context menu
+
+### 1.4.0
+
+**New**: Extraction history — every extraction is saved automatically (named by profile + date, renamable, identical extractions deduped), managed and reloaded from the right "Extraction History" panel, and review sessions are linked to their extraction. Quiz history is now aggregated per extraction in the right "Quiz History" panel with a "wrong only" filter and one-click wrong-answer review — per extraction or across all wrong notes — and notes answered correctly leave the wrong set automatically. The ribbon right-click now opens a menu (Pick profile & extract / Extraction control / Quiz history / Extraction history). Changelog moved to its own settings tab.
 
 ### 1.3.0
 
@@ -89,26 +103,33 @@ Configuration is organized into **profiles**: a profile bundles a folder plus it
 Three ways:
 
 - `Ctrl+P` → Search "Start Random Review"
-- Click 🎲 icon in the left ribbon
+- Click 🎲 icon in the left ribbon (left-click extracts; right-click opens a menu with "Pick profile & extract", "Extraction control", "Quiz history", and "Extraction history")
 - Right-click a folder → "Random pick from this folder"
 
-### 3. Navigation
+### 3. Extraction History & Quiz History
+
+- Every extraction is saved automatically in the **Extraction History** panel (right sidebar): rename, delete, or click "Load" to reopen it in the middle workspace as a new tab. Re-running an identical extraction does not create a duplicate record.
+- Answer records from quiz mode are linked to the extraction they came from. Open the **Quiz History** panel (right sidebar or top-bar "History" while reviewing) to see each extraction's aggregate stats.
+- Tick **"Wrong only"** to show mistakes only, still grouped per extraction.
+- **"Review wrong"** (per extraction) or **"Review all wrong"** (top bar) starts a new review session on just those notes. When you answer a note correctly during wrong-answer review, it is removed from the wrong set for the next time.
+
+### 4. Navigation
 
 | Action | Button / Shortcut |
 | --- | --- |
-| Next | Click「下一题 →」or press `→` / `Space` |
-| Previous | Click「← 上一题」or press `←` |
+| Next | Click「Next →」or press `→` / `Space` |
+| Previous | Click「← Previous」or press `←` |
 | Show/Hide Answer | Click toggle button or press `A` |
 | Mark Correct | Click ✓ or press `J` |
 | Mark Incorrect | Click ✗ or press `K` |
-| Skip | Click「跳过」or press `⏭` |
-| View History | Click「历史」in top bar; right sidebar shows per-question records |
-| Review Note | Hover a history record and click「回顾」to open in split pane |
-| Edit Original Note | Click「编辑原笔记」to open split pane |
-| Export | Click「导出」, choose a format and scope |
+| Skip | Click「Skip」or press `⏭` |
+| View Quiz History | Click「History」in top bar; right sidebar shows records grouped by extraction |
+| Review Note | In quiz history, click「Review」on a row to open the note in split pane |
+| Edit Original Note | Click「Edit Note」to open split pane |
+| Export | Click「Export」, choose a format and scope |
 | Exit | Click `✕` or press `Esc` |
 
-### 4. Note Format
+### 5. Note Format
 
 Place answers inside a **folded callout**:
 

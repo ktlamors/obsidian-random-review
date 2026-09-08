@@ -4,6 +4,8 @@ import {
   Notice,
   TFolder,
   Command,
+  TFile,
+  Menu,
 } from "obsidian";
 import {
   VIEW_TYPE_RANDOM_REVIEW,
@@ -18,6 +20,14 @@ import { RandomReviewSettingTab } from "./settings";
 import { extractNotes } from "./note-extractor";
 import { ReviewView } from "./review-view";
 import { QuizHistoryView, VIEW_TYPE_QUIZ_HISTORY } from "./quiz-history-view";
+import { HistorySidebarView, HISTORY_VIEW_TYPE } from "./history-sidebar-view";
+import {
+  HistoryStorage,
+  HistoryEntry,
+  HISTORY_STORAGE_KEY,
+} from "./history-storage";
+import { QUIZ_STORAGE_KEY } from "./quiz-storage";
+import { ProfilePickModal } from "./profile-pick-modal";
 import { getLang } from "./i18n";
 
 /** Obsidian 内部设置管理器的最小接口（未在公开类型中暴露） */
@@ -65,11 +75,13 @@ export default class RandomReviewPlugin extends Plugin {
   settings!: RandomReviewSettings;
   private ribbonIcon!: HTMLElement;
   private startCommand!: Command;
+  private settingTab!: RandomReviewSettingTab;
 
   async onload(): Promise<void> {
     await this.loadSettings();
 
-    this.addSettingTab(new RandomReviewSettingTab(this.app, this));
+    this.settingTab = new RandomReviewSettingTab(this.app, this);
+    this.addSettingTab(this.settingTab);
 
     this.registerView(
       VIEW_TYPE_RANDOM_REVIEW,
@@ -78,6 +90,10 @@ export default class RandomReviewPlugin extends Plugin {
     this.registerView(
       VIEW_TYPE_QUIZ_HISTORY,
       (leaf: WorkspaceLeaf) => new QuizHistoryView(leaf, this)
+    );
+    this.registerView(
+      HISTORY_VIEW_TYPE,
+      (leaf: WorkspaceLeaf) => new HistorySidebarView(leaf, this)
     );
 
     this.registerStartCommand();
@@ -96,20 +112,107 @@ export default class RandomReviewPlugin extends Plugin {
   }
 
   private registerRibbonIcon(): void {
-    this.ribbonIcon = this.addRibbonIcon(
-      "dice",
-      getLang(this.settings.language).ribbonTooltip,
-      () => {
-        void this.startReview();
-      }
-    );
+    this.ribbonIcon = this.addRibbonIcon("dice", getLang(this.settings.language).ribbonTooltip, () => {});
+
+    // 左键抽取；右键弹菜单。自行绑定 click 并忽略非主键，
+    // 避免右键松开时被当作点击而误触发一次抽取
+    this.ribbonIcon.addEventListener("click", (e) => {
+      if (e.button !== 0) return;
+      void this.startReview();
+    });
 
     this.ribbonIcon.addEventListener("contextmenu", (e) => {
       e.preventDefault();
-      const setting = (this.app as unknown as { setting: SettingManager }).setting;
-      void setting.open();
-      void setting.openTabById(this.manifest.id);
+      e.stopPropagation();
+      this.showRibbonMenu(e);
     });
+  }
+
+  /** 右键 Ribbon 图标弹出的功能菜单 */
+  private showRibbonMenu(e: MouseEvent): void {
+    const t = getLang(this.settings.language);
+    const menu = new Menu();
+    menu.addItem((item) =>
+      item
+        .setTitle(t.menuSelectProfileExtract)
+        .setIcon("dice")
+        .onClick(() => this.openProfilePick())
+    );
+    menu.addItem((item) =>
+      item
+        .setTitle(t.menuExtractionControl)
+        .setIcon("settings")
+        .onClick(() => {
+          void this.openSettingsAt("extraction");
+        })
+    );
+    menu.addItem((item) =>
+      item
+        .setTitle(t.menuQuizHistory)
+        .setIcon("clock")
+        .onClick(() => this.openQuizHistorySidebar())
+    );
+    menu.addItem((item) =>
+      item
+        .setTitle(t.menuExtractionHistory)
+        .setIcon("history")
+        .onClick(() => {
+          void this.openExtractionHistorySidebar();
+        })
+    );
+    menu.showAtMouseEvent(e);
+  }
+
+  /** 无档案时引导去抽取控制建档；有档案则弹出选择框后抽取 */
+  private openProfilePick(): void {
+    if (this.settings.profiles.length === 0) {
+      new Notice(getLang(this.settings.language).noProfileTip);
+      void this.openSettingsAt("extraction");
+      return;
+    }
+    new ProfilePickModal(this.app, this).open();
+  }
+
+  /** 打开设置页并切换到指定选项卡 */
+  private async openSettingsAt(
+    key: "general" | "extraction" | "quiz" | "history"
+  ): Promise<void> {
+    this.settingTab?.activateTab(key);
+    const setting = (this.app as unknown as { setting: SettingManager }).setting;
+    await setting.open();
+    await setting.openTabById(this.manifest.id);
+  }
+
+  /** 在右侧边栏打开历史答题视图 */
+  private openQuizHistorySidebar(): void {
+    const { workspace } = this.app;
+    const existing = workspace.getLeavesOfType(VIEW_TYPE_QUIZ_HISTORY);
+    let leaf: WorkspaceLeaf;
+    if (existing.length > 0) {
+      leaf = existing[0];
+    } else {
+      leaf = workspace.getRightLeaf(false)!;
+      void leaf.setViewState({ type: VIEW_TYPE_QUIZ_HISTORY, active: true });
+    }
+    void workspace.revealLeaf(leaf);
+  }
+
+  /** 在右侧边栏打开抽取历史视图并刷新 */
+  private async openExtractionHistorySidebar(): Promise<void> {
+    const { workspace } = this.app;
+    const existing = workspace.getLeavesOfType(HISTORY_VIEW_TYPE);
+    let leaf: WorkspaceLeaf;
+    if (existing.length > 0) {
+      leaf = existing[0];
+    } else {
+      leaf = workspace.getRightLeaf(false)!;
+      void leaf.setViewState({ type: HISTORY_VIEW_TYPE, active: true });
+    }
+    void workspace.revealLeaf(leaf);
+    const view = leaf.view;
+    if (view instanceof HistorySidebarView) {
+      void view.refresh();
+    }
   }
 
   private registerFolderMenu(): void {
@@ -131,6 +234,87 @@ export default class RandomReviewPlugin extends Plugin {
     );
   }
 
+  /** 抽取历史数据变更后，同步刷新侧边栏视图与设置页历史选项卡 */
+  notifyHistoryChanged(): void {
+    this.app.workspace.getLeavesOfType(HISTORY_VIEW_TYPE).forEach((leaf) => {
+      const view = leaf.view;
+      if (view instanceof HistorySidebarView) {
+        void view.refresh();
+      }
+    });
+    this.refreshQuizHistoryViews();
+    this.settingTab?.refreshHistoryView();
+  }
+
+  /** 有新的答题记录后，刷新已打开的答题历史视图 */
+  refreshQuizHistoryViews(): void {
+    this.app.workspace.getLeavesOfType(VIEW_TYPE_QUIZ_HISTORY).forEach((leaf) => {
+      const view = leaf.view;
+      if (view instanceof QuizHistoryView) {
+        void view.refresh();
+      }
+    });
+  }
+
+  /** 按给定笔记路径集合在中间工作区新开复习标签页；无有效文件返回 null */
+  private async openReviewQueue(
+    paths: string[],
+    title: string,
+    historyId: string | null
+  ): Promise<boolean> {
+    const files: TFile[] = [];
+    for (const p of paths) {
+      const f = this.app.vault.getAbstractFileByPath(p);
+      if (f instanceof TFile) files.push(f);
+    }
+    if (files.length === 0) return false;
+
+    const { workspace } = this.app;
+    const leaf = workspace.getLeaf("tab");
+    await leaf.setViewState({ type: VIEW_TYPE_RANDOM_REVIEW, active: true });
+    await workspace.revealLeaf(leaf);
+    const view = leaf.view as ReviewView;
+    await view.startReview(
+      files,
+      this.settings.answerDefaultCollapsed,
+      this.settings.showNavigationBar,
+      this.settings.language,
+      { title, historyId }
+    );
+    return true;
+  }
+
+  /** 错题复习：paths 为错题文件路径列表 */
+  async startWrongReview(
+    paths: string[],
+    title: string,
+    historyId: string | null
+  ): Promise<void> {
+    const ok = await this.openReviewQueue(paths, title, historyId);
+    if (!ok) new Notice(getLang(this.settings.language).historyNotesMissing);
+  }
+
+  /** 从抽取历史加载复习：已打开则提示并激活，否则在中间工作区新开标签页 */
+  async loadHistoryEntry(entry: HistoryEntry): Promise<void> {
+    const t = getLang(this.settings.language);
+
+    const { workspace } = this.app;
+    const alreadyOpen = workspace
+      .getLeavesOfType(VIEW_TYPE_RANDOM_REVIEW)
+      .find((l) => {
+        const v = l.view;
+        return v instanceof ReviewView && v.historyId === entry.id;
+      });
+    if (alreadyOpen) {
+      new Notice(t.historyAlreadyOpen);
+      await workspace.revealLeaf(alreadyOpen);
+      return;
+    }
+
+    const ok = await this.openReviewQueue(entry.files, entry.name, entry.id);
+    new Notice(ok ? t.historyLoaded : t.historyNotesMissing);
+  }
+
   /** 语言切换后刷新命令名与 Ribbon 提示 */
   refreshUIStrings(): void {
     if (this.startCommand) {
@@ -149,17 +333,24 @@ export default class RandomReviewPlugin extends Plugin {
   onunload(): void {
     // 退出前把当前工作区写回激活档案（best-effort 持久化）
     this.syncWorkingToActiveProfile();
-    void this.saveData(this.settings);
+    void this.saveSettings();
   }
 
   async loadSettings(): Promise<void> {
     const raw = (await this.loadData()) as LegacyStoredData | null;
-    const data = raw ?? {};
+    const data: Record<string, unknown> = raw ?? {};
+
+    // quizData / extractionHistory 由 QuizStorage、HistoryStorage 独立管理，
+    // 不要并入 settings，否则 settings 会残留过期副本并在下次保存时覆盖它们
+    delete data[QUIZ_STORAGE_KEY];
+    delete data[HISTORY_STORAGE_KEY];
 
     // 迁移旧版存档：顶层扁平 propertyFilters → 条件组
     migrateLegacyPropertyFilters(data);
     // 迁移旧版按文件夹键的档案 → 命名档案数组
-    data.profiles = this.migrateProfiles(data.profiles);
+    data.profiles = this.migrateProfiles(
+      data.profiles as unknown as NamedProfile[] | undefined
+    );
 
     this.settings = Object.assign({}, DEFAULT_SETTINGS, data);
 
@@ -174,7 +365,14 @@ export default class RandomReviewPlugin extends Plugin {
   }
 
   async saveSettings(): Promise<void> {
-    await this.saveData(this.settings);
+    const raw = (await this.loadData()) as Record<string, unknown> | null;
+    const data: Record<string, unknown> = { ...this.settings };
+    // 保留 Storage 独立管理的键，避免本次设置保存覆盖其真实内容
+    const quizData = raw?.[QUIZ_STORAGE_KEY];
+    const historyData = raw?.[HISTORY_STORAGE_KEY];
+    if (quizData !== undefined) data[QUIZ_STORAGE_KEY] = quizData;
+    if (historyData !== undefined) data[HISTORY_STORAGE_KEY] = historyData;
+    await this.saveData(data);
   }
 
   // ──────────────────────────────────────────
@@ -295,6 +493,12 @@ export default class RandomReviewPlugin extends Plugin {
     const queue = extractNotes(this.app, this.settings);
     if (queue.length === 0) return;
 
+    // 保存抽取历史（列表相同则去重复用其 id），并把本次会话归属到该历史
+    const historyStorage = new HistoryStorage(this);
+    const title = this.buildHistoryTitle();
+    const historyId = await historyStorage.add(queue, title);
+    this.notifyHistoryChanged();
+
     const { workspace } = this.app;
 
     let leaf: WorkspaceLeaf;
@@ -315,7 +519,16 @@ export default class RandomReviewPlugin extends Plugin {
       queue,
       this.settings.answerDefaultCollapsed,
       this.settings.showNavigationBar,
-      this.settings.language
+      this.settings.language,
+      { title, historyId }
     );
+  }
+
+  /** 新抽取历史的默认标题：档案名 + MM-DD */
+  private buildHistoryTitle(): string {
+    const profileName =
+      this.getActiveProfile()?.name ?? this.settings.folderPath ?? "未知";
+    const dateStr = new Date().toISOString().slice(5, 10);
+    return `${profileName} - ${dateStr}`;
   }
 }

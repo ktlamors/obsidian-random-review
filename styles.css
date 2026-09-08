@@ -219,6 +219,7 @@
 /* 设置面板 */
 .random-review-tabs {
   display: flex;
+  flex-wrap: wrap;
   gap: 4px;
   margin-bottom: 16px;
   border-bottom: 1px solid var(--background-modifier-border);
@@ -571,10 +572,79 @@
 
 .quiz-history-file {
   flex: 1;
+  min-width: 0;
   font-size: 0.9em;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.quiz-history-rename-input {
+  flex: 1;
+  min-width: 0;
+  font-size: 0.9em;
+  padding: 1px 4px;
+  height: 24px;
+}
+
+.quiz-history-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--background-modifier-border);
+  flex-wrap: wrap;
+}
+
+.quiz-history-wrong-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.9em;
+  color: var(--text-normal);
+  cursor: pointer;
+  user-select: none;
+}
+
+.quiz-history-allwrong {
+  margin-left: auto;
+}
+
+.quiz-history-group-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  font-size: 0.85em;
+  color: var(--text-muted);
+  border-bottom: 1px solid var(--background-modifier-border);
+  margin-top: 8px;
+  flex-wrap: wrap;
+}
+
+.quiz-history-group-meta {
+  display: inline-flex;
+  gap: 8px;
+  flex: 1;
+  min-width: 0;
+  font-size: 0.82em;
+  color: var(--text-faint);
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.quiz-history-wrongbtn {
+  margin-left: auto;
+}
+
+.quiz-history-review-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.quiz-history-stale {
+  opacity: 0.45;
 }
 
 .quiz-history-time {
@@ -601,6 +671,7 @@
   color: var(--text-on-accent);
   cursor: pointer;
   white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .quiz-history-review-btn:hover {
@@ -609,4 +680,19 @@
 
 .random-review-quiz-history-modal {
   max-width: 520px;
+}
+
+.random-review-rename-modal {
+  max-width: 420px;
+}
+
+/* 抽取历史面板 */
+.random-review-history-panel {
+  padding: 8px;
+}
+
+.random-review-history-panel .quiz-history-empty {
+  padding: 16px;
+  text-align: center;
+  color: var(--text-muted);
 }

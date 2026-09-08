@@ -34,6 +34,8 @@ export interface AnswerRecord {
   durationMs: number; // 从题目显示到记录答题的毫秒数
   correct: boolean | null; // true=正确, false=错误, null=跳过
   stoppedBy: QuizTimerStopMode; // 计时停止原因
+  /** 所属抽取历史 id；直接复习/旧数据可为 null */
+  historyId?: string | null;
 }
 
 /** 每个目标文件夹的独立配置 */

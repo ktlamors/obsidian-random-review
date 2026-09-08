@@ -1,7 +1,9 @@
 import type RandomReviewPlugin from "./main";
 import type { AnswerRecord } from "./constants";
 
-const STORAGE_KEY = "quizData";
+export const QUIZ_STORAGE_KEY = "quizData";
+
+const STORAGE_KEY = QUIZ_STORAGE_KEY;
 
 interface QuizStorageData {
   results: AnswerRecord[];
@@ -88,22 +90,39 @@ export class QuizStorage {
     await this.plugin.saveData(raw);
   }
 
-  getStats(filePath?: string): {
+  /** 统计持久层答题记录，可按 sessionId / 单个文件过滤 */
+  async getStats(opts?: {
+    sessionId?: string;
+    filePath?: string;
+  }): Promise<{
+    total: number;
+    correct: number;
+    incorrect: number;
+    skipped: number;
+    avgTime: number;
+  }> {
+    const results = await this.load();
+    const filtered = results.filter((r) => {
+      if (opts?.sessionId && r.sessionId !== opts.sessionId) return false;
+      if (opts?.filePath && r.filePath !== opts.filePath) return false;
+      return true;
+    });
+    return this.statsOf(filtered);
+  }
+
+  /** 纯统计函数：由给定记录数组计算 */
+  statsOf(results: AnswerRecord[]): {
     total: number;
     correct: number;
     incorrect: number;
     skipped: number;
     avgTime: number;
   } {
-    const results = this.plugin.settings.answerHistory;
-    const filtered = filePath
-      ? results.filter((r) => r.filePath === filePath)
-      : results;
-    const total = filtered.length;
-    const correct = filtered.filter((r) => r.correct === true).length;
-    const incorrect = filtered.filter((r) => r.correct === false).length;
-    const skipped = filtered.filter((r) => r.correct === null).length;
-    const answered = filtered.filter((r) => r.durationMs > 0);
+    const total = results.length;
+    const correct = results.filter((r) => r.correct === true).length;
+    const incorrect = results.filter((r) => r.correct === false).length;
+    const skipped = results.filter((r) => r.correct === null).length;
+    const answered = results.filter((r) => r.durationMs > 0);
     const avgTime =
       answered.length > 0
         ? answered.reduce((sum, r) => sum + r.durationMs, 0) / answered.length
